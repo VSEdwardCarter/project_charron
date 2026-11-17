@@ -404,6 +404,6 @@ class JdbcEquipmentRepositoryTest {
         assertFalse(removedAgain);
     }
 
-    
+
 
 }
