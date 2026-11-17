@@ -1,7 +1,7 @@
 # CHARRON — Development Standards
 
-**Status:** Active  
-**Architecture:** Modular Monolith  
+**Status:** Active
+**Architecture:** Modular Monolith
 **Backend:** Java 21 / Spring Boot
 
 ## 1. Development Principles
