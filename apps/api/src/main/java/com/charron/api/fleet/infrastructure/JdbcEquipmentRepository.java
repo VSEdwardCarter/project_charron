@@ -6,6 +6,8 @@ import com.charron.api.fleet.domain.Equipment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import com.charron.api.fleet.domain.EquipmentCategory;
+import com.charron.api.fleet.application.EquipmentRepository;
+
 
 import java.util.List;
 import java.util.Optional;
@@ -15,7 +17,8 @@ import java.util.UUID;
 import java.util.Objects;
 
 @Repository
-public class JdbcEquipmentRepository {
+public class JdbcEquipmentRepository implements EquipmentRepository {
+
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -23,6 +26,7 @@ public class JdbcEquipmentRepository {
         this.jdbcTemplate = Objects.requireNonNull(jdbcTemplate);
     }
 
+    @Override
     public void insertIdentity(Equipment equipment) {
         Objects.requireNonNull(
                 equipment,
@@ -55,6 +59,7 @@ public class JdbcEquipmentRepository {
 
     }
 
+    @Override
     public Optional<Equipment> findIdentityById(UUID id) {
         Objects.requireNonNull(id, "Equipment ID is required");
 

@@ -3,6 +3,7 @@ package com.charron.api.fleet.infrastructure;
 
 import com.charron.api.fleet.domain.Equipment;
 import com.charron.api.fleet.domain.EquipmentCategory;
+import com.charron.api.fleet.application.EquipmentRepository;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class JdbcEquipmentRepositoryTest {
 
     @Autowired
-    private JdbcEquipmentRepository repository;
+    private EquipmentRepository repository;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
