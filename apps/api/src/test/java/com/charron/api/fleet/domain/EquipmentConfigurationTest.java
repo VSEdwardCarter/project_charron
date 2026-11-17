@@ -138,4 +138,100 @@ class EquipmentConfigurationTest {
                 configuration.getEquipmentId()
         );
     }
+
+
+    @Test
+    void configurationStartsWithoutCapabilities() {
+        EquipmentConfiguration configuration =
+                new EquipmentConfiguration(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        "Liftgate Configuration",
+                        false
+                );
+
+        assertTrue(configuration.getCapabilities().isEmpty());
+    }
+
+    @Test
+    void addsConfigurationCapabilities() {
+        EquipmentConfiguration configuration =
+                new EquipmentConfiguration(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        "Liftgate Configuration",
+                        true
+                );
+
+        configuration.addCapability(
+                EquipmentCapability.LIFTING
+        );
+
+        assertTrue(configuration.hasCapability(
+                EquipmentCapability.LIFTING
+        ));
+    }
+
+    @Test
+    void preventsDuplicateConfigurationCapabilities() {
+        EquipmentConfiguration configuration =
+                new EquipmentConfiguration(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        "Refrigerated Configuration",
+                        true
+                );
+
+        configuration.addCapability(
+                EquipmentCapability.TEMPERATURE_CONTROL
+        );
+
+        configuration.addCapability(
+                EquipmentCapability.TEMPERATURE_CONTROL
+        );
+
+        assertEquals(1, configuration.getCapabilities().size());
+    }
+
+    @Test
+    void removesConfigurationCapabilities() {
+        EquipmentConfiguration configuration =
+                new EquipmentConfiguration(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        "Liftgate Configuration",
+                        true
+                );
+
+        configuration.addCapability(
+                EquipmentCapability.LIFTING
+        );
+
+        configuration.removeCapability(
+                EquipmentCapability.LIFTING
+        );
+
+        assertFalse(configuration.hasCapability(
+                EquipmentCapability.LIFTING
+        ));
+    }
+
+    @Test
+    void preventsExternalCapabilityModification() {
+        EquipmentConfiguration configuration =
+                new EquipmentConfiguration(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        "Liftgate Configuration",
+                        true
+                );
+
+        assertThrows(
+                UnsupportedOperationException.class,
+                () -> configuration.getCapabilities().add(
+                        EquipmentCapability.LIFTING
+                )
+        );
+    }
+
 }
