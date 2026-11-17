@@ -116,14 +116,17 @@ class EquipmentTest {
                 null
         );
 
+
         EquipmentSpecifications initial =
                 new EquipmentSpecifications(
-                        new Dimensions(12000, 2500, 4000)
+                        new Dimensions(12000, 2500, 4000),
+                        null
                 );
 
         EquipmentSpecifications updated =
                 new EquipmentSpecifications(
-                        new Dimensions(12500, 2600, 4000)
+                        new Dimensions(12500, 2600, 4000),
+                        null
                 );
 
         equipment.updateSpecifications(initial);
