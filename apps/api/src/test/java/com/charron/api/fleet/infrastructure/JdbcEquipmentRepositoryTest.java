@@ -158,4 +158,38 @@ class JdbcEquipmentRepositoryTest {
     }
 
 
+    @Test
+    void retrievesEquipmentSpecificationsById() {
+        UUID id = UUID.randomUUID();
+
+        Equipment equipment = new Equipment(
+                id,
+                "CHARRON Test Container",
+                EquipmentCategory.CONTAINER,
+                null
+        );
+
+        repository.insertIdentity(equipment);
+
+        EquipmentSpecifications original =
+                new EquipmentSpecifications(
+                        new Dimensions(6000, 2400, 2600),
+                        new WeightSpecifications(
+                                new Weight(2200000),
+                                new Weight(30000000),
+                                null
+                        )
+                );
+
+        repository.insertSpecifications(id, original);
+
+        EquipmentSpecifications retrieved =
+                repository.findSpecificationsByEquipmentId(id)
+                        .orElseThrow();
+
+        assertEquals(original, retrieved);
+    }
+
+
+
 }

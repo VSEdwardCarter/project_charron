@@ -144,4 +144,62 @@ public class JdbcEquipmentRepository implements EquipmentRepository {
         return results.stream().findFirst();
     }
 
+
+    @Override
+    public Optional<EquipmentSpecifications> findSpecificationsByEquipmentId(
+            UUID equipmentId
+    ) {
+        Objects.requireNonNull(
+                equipmentId, "Equipment ID is required"
+        );
+
+        String sql = """
+            SELECT
+                length_mm,
+                width_mm,
+                height_mm,
+                weight_specifications_present,
+                empty_weight_grams,
+                gross_weight_rating_grams,
+                rated_payload_capacity_grams
+            FROM equipment_specifications
+            WHERE equipment_id = ?
+            """;
+
+        List<EquipmentSpecifications> results = jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> {
+                    Long lengthMm = rs.getObject("length_mm", Long.class);
+                    Long widthMm = rs.getObject("width_mm", Long.class);
+                    Long heightMm = rs.getObject("height_mm", Long.class);
+
+                    Dimensions dimensions = lengthMm == null
+                            ? null
+                            : new Dimensions(lengthMm, widthMm, heightMm);
+
+                    WeightSpecifications weights =
+                            rs.getBoolean("weight_specifications_present")
+                                    ? new WeightSpecifications(
+                                    weightOrNull(rs.getObject(
+                                            "empty_weight_grams", Long.class)),
+                                    weightOrNull(rs.getObject(
+                                            "gross_weight_rating_grams", Long.class)),
+                                    weightOrNull(rs.getObject(
+                                            "rated_payload_capacity_grams", Long.class))
+                            )
+                                    : null;
+
+                    return new EquipmentSpecifications(dimensions, weights);
+                },
+                equipmentId
+        );
+
+        return results.stream().findFirst();
+    }
+
+    private static Weight weightOrNull(Long grams) {
+        return grams == null ? null : new Weight(grams);
+    }
+
+
 }

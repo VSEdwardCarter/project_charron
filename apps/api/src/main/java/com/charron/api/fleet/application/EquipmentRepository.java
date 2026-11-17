@@ -18,4 +18,10 @@ public interface EquipmentRepository {
     void insertIdentity(Equipment equipment);
 
     Optional<Equipment> findIdentityById(UUID id);
+
+
+    Optional<EquipmentSpecifications> findSpecificationsByEquipmentId(
+            UUID equipmentId
+    );
+
 }
