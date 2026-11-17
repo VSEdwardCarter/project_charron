@@ -8,6 +8,7 @@ public class Equipment {
     private String name;
     private EquipmentCategory category;
     private String vin;
+    private EquipmentSpecifications specifications;
 
     public Equipment(
             UUID id,
@@ -61,6 +62,19 @@ public class Equipment {
 
         return vin.trim().toUpperCase(
                 java.util.Locale.ROOT
+        );
+    }
+
+    public EquipmentSpecifications getSpecifications() {
+        return specifications;
+    }
+
+    public void updateSpecifications(
+            EquipmentSpecifications specifications
+    ) {
+        this.specifications = Objects.requireNonNull(
+                specifications,
+                "Equipment specifications are required"
         );
     }
 }
