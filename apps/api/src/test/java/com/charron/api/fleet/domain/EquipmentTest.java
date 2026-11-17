@@ -149,4 +149,119 @@ class EquipmentTest {
         );
     }
 
+
+    @Test
+    void equipmentStartsWithoutCapabilities() {
+        Equipment equipment = new Equipment(
+                UUID.randomUUID(),
+                "Tractor 001",
+                EquipmentCategory.TRACTOR,
+                null
+        );
+
+        assertTrue(equipment.getCapabilities().isEmpty());
+    }
+
+    @Test
+    void addsAndQueriesCapabilities() {
+        Equipment equipment = new Equipment(
+                UUID.randomUUID(),
+                "Tractor 001",
+                EquipmentCategory.TRACTOR,
+                null
+        );
+
+        equipment.addCapability(
+                EquipmentCapability.PROPULSION
+        );
+
+        equipment.addCapability(
+                EquipmentCapability.TOWING
+        );
+
+        assertTrue(equipment.hasCapability(
+                EquipmentCapability.PROPULSION
+        ));
+
+        assertTrue(equipment.hasCapability(
+                EquipmentCapability.TOWING
+        ));
+
+        assertEquals(2, equipment.getCapabilities().size());
+    }
+
+    @Test
+    void preventsDuplicateCapabilities() {
+        Equipment equipment = new Equipment(
+                UUID.randomUUID(),
+                "Trailer 001",
+                EquipmentCategory.TRAILER,
+                null
+        );
+
+        equipment.addCapability(
+                EquipmentCapability.CARGO_TRANSPORT
+        );
+
+        equipment.addCapability(
+                EquipmentCapability.CARGO_TRANSPORT
+        );
+
+        assertEquals(1, equipment.getCapabilities().size());
+    }
+
+    @Test
+    void removesCapabilities() {
+        Equipment equipment = new Equipment(
+                UUID.randomUUID(),
+                "Trailer 001",
+                EquipmentCategory.TRAILER,
+                null
+        );
+
+        equipment.addCapability(
+                EquipmentCapability.CARGO_TRANSPORT
+        );
+
+        equipment.removeCapability(
+                EquipmentCapability.CARGO_TRANSPORT
+        );
+
+        assertFalse(equipment.hasCapability(
+                EquipmentCapability.CARGO_TRANSPORT
+        ));
+    }
+
+    @Test
+    void preventsExternalModificationOfCapabilities() {
+        Equipment equipment = new Equipment(
+                UUID.randomUUID(),
+                "Tractor 001",
+                EquipmentCategory.TRACTOR,
+                null
+        );
+
+        assertThrows(
+                UnsupportedOperationException.class,
+                () -> equipment.getCapabilities().add(
+                        EquipmentCapability.TOWING
+                )
+        );
+    }
+
+    @Test
+    void rejectsNullCapabilities() {
+        Equipment equipment = new Equipment(
+                UUID.randomUUID(),
+                "Tractor 001",
+                EquipmentCategory.TRACTOR,
+                null
+        );
+
+        assertThrows(
+                NullPointerException.class,
+                () -> equipment.addCapability(null)
+        );
+    }
+
 }

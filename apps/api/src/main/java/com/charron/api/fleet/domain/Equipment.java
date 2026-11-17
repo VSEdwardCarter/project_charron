@@ -1,6 +1,5 @@
 package com.charron.api.fleet.domain;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 public class Equipment {
 
@@ -9,6 +8,8 @@ public class Equipment {
     private EquipmentCategory category;
     private String vin;
     private EquipmentSpecifications specifications;
+    private final Set<EquipmentCapability> capabilities =
+            EnumSet.noneOf(EquipmentCapability.class);
 
     public Equipment(
             UUID id,
@@ -77,4 +78,37 @@ public class Equipment {
                 "Equipment specifications are required"
         );
     }
+
+
+    public Set<EquipmentCapability> getCapabilities() {
+        return Collections.unmodifiableSet(capabilities);
+    }
+
+    public void addCapability(EquipmentCapability capability) {
+        capabilities.add(
+                Objects.requireNonNull(
+                        capability,
+                        "Equipment capability is required"
+                )
+        );
+    }
+
+    public void removeCapability(EquipmentCapability capability) {
+        capabilities.remove(
+                Objects.requireNonNull(
+                        capability,
+                        "Equipment capability is required"
+                )
+        );
+    }
+
+    public boolean hasCapability(EquipmentCapability capability) {
+        return capabilities.contains(
+                Objects.requireNonNull(
+                        capability,
+                        "Equipment capability is required"
+                )
+        );
+    }
+
 }
