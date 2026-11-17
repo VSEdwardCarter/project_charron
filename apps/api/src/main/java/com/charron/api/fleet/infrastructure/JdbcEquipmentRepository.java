@@ -262,6 +262,31 @@ public class JdbcEquipmentRepository implements EquipmentRepository {
     }
 
 
+    @Override
+    public boolean removeCapability(
+            UUID equipmentId,
+            EquipmentCapability capability
+    ) {
+        Objects.requireNonNull(
+                equipmentId, "Equipment ID is required"
+        );
+        Objects.requireNonNull(
+                capability, "Equipment capability is required"
+        );
 
+        String sql = """
+            DELETE FROM equipment_capabilities
+            WHERE equipment_id = ?
+              AND capability = ?
+            """;
+
+        int rows = jdbcTemplate.update(
+                sql,
+                equipmentId,
+                capability.name()
+        );
+
+        return rows == 1;
+    }
 
 }

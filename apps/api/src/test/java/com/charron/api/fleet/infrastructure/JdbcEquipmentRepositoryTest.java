@@ -362,4 +362,48 @@ class JdbcEquipmentRepositoryTest {
     }
 
 
+    @Test
+    void removesOnlyTheSpecifiedEquipmentCapability() {
+        UUID id = UUID.randomUUID();
+
+        repository.insertIdentity(new Equipment(
+                id,
+                "CHARRON Test Tractor",
+                EquipmentCategory.TRACTOR,
+                null
+        ));
+
+        repository.insertCapability(
+                id, EquipmentCapability.PROPULSION
+        );
+        repository.insertCapability(
+                id, EquipmentCapability.TOWING
+        );
+        repository.insertCapability(
+                id, EquipmentCapability.CARGO_TRANSPORT
+        );
+
+        boolean removed = repository.removeCapability(
+                id, EquipmentCapability.TOWING
+        );
+
+        assertTrue(removed);
+
+        assertEquals(
+                Set.of(
+                        EquipmentCapability.PROPULSION,
+                        EquipmentCapability.CARGO_TRANSPORT
+                ),
+                repository.findCapabilitiesByEquipmentId(id)
+        );
+
+        boolean removedAgain = repository.removeCapability(
+                id, EquipmentCapability.TOWING
+        );
+
+        assertFalse(removedAgain);
+    }
+
+    
+
 }
