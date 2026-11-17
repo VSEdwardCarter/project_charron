@@ -1,6 +1,6 @@
 # ADR-001: Initial Application Architecture
 
-**Status:** Accepted  
+**Status:** Accepted
 **Project:** CHARRON
 
 ## Context
