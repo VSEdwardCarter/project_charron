@@ -14,13 +14,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertNull;
 
 
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @Transactional
@@ -190,6 +188,95 @@ class JdbcEquipmentRepositoryTest {
         assertEquals(original, retrieved);
     }
 
+
+    @Test
+    void retrievesSpecificationsWithoutDimensions() {
+        UUID id = UUID.randomUUID();
+
+        repository.insertIdentity(new Equipment(
+                id,
+                "CHARRON Forklift",
+                EquipmentCategory.MATERIAL_HANDLING,
+                null
+        ));
+
+        EquipmentSpecifications original =
+                new EquipmentSpecifications(
+                        null,
+                        new WeightSpecifications(
+                                new Weight(4500000),
+                                new Weight(6500000),
+                                null
+                        )
+                );
+
+        repository.insertSpecifications(id, original);
+
+        EquipmentSpecifications retrieved =
+                repository.findSpecificationsByEquipmentId(id)
+                        .orElseThrow();
+
+        assertEquals(original, retrieved);
+        assertNull(retrieved.exteriorDimensions());
+    }
+
+    @Test
+    void retrievesSpecificationsWithoutWeights() {
+        UUID id = UUID.randomUUID();
+
+        repository.insertIdentity(new Equipment(
+                id,
+                "CHARRON Container",
+                EquipmentCategory.CONTAINER,
+                null
+        ));
+
+        EquipmentSpecifications original =
+                new EquipmentSpecifications(
+                        new Dimensions(6000, 2400, 2600),
+                        null
+                );
+
+        repository.insertSpecifications(id, original);
+
+        EquipmentSpecifications retrieved =
+                repository.findSpecificationsByEquipmentId(id)
+                        .orElseThrow();
+
+        assertEquals(original, retrieved);
+        assertNull(retrieved.weightSpecifications());
+    }
+
+    @Test
+    void preservesPresentButUnknownWeightSpecifications() {
+        UUID id = UUID.randomUUID();
+
+        repository.insertIdentity(new Equipment(
+                id,
+                "CHARRON Specialized Equipment",
+                EquipmentCategory.SPECIALIZED,
+                null
+        ));
+
+        EquipmentSpecifications original =
+                new EquipmentSpecifications(
+                        null,
+                        new WeightSpecifications(null, null, null)
+                );
+
+        repository.insertSpecifications(id, original);
+
+        EquipmentSpecifications retrieved =
+                repository.findSpecificationsByEquipmentId(id)
+                        .orElseThrow();
+
+        assertEquals(original, retrieved);
+        assertNull(retrieved.exteriorDimensions());
+        assertNotNull(retrieved.weightSpecifications());
+        assertNull(retrieved.weightSpecifications().emptyWeight());
+        assertNull(retrieved.weightSpecifications().grossWeightRating());
+        assertNull(retrieved.weightSpecifications().ratedPayloadCapacity());
+    }
 
 
 }
