@@ -198,4 +198,132 @@ class EquipmentModificationLifecycleTest {
                 )
         );
     }
+
+
+    @Test
+    void reconstructsLifecycleBeforeRemovalWasRecorded() {
+        UUID id = UUID.randomUUID();
+
+        EquipmentModificationEvent installation =
+                new EquipmentModificationEvent(
+                        UUID.randomUUID(),
+                        id,
+                        EquipmentModificationEventType.RECORDED,
+                        INSTALLED,
+                        Instant.parse("2026-11-05T10:00:00Z")
+                );
+
+        EquipmentModificationEvent removal =
+                new EquipmentModificationEvent(
+                        UUID.randomUUID(),
+                        id,
+                        EquipmentModificationEventType.REMOVED,
+                        REMOVED,
+                        Instant.parse("2026-11-16T10:00:00Z")
+                );
+
+        EquipmentModificationLifecycle lifecycle =
+                EquipmentModificationLifecycle.reconstructAsKnownAt(
+                        id,
+                        List.of(installation, removal),
+                        Instant.parse("2026-11-15T12:00:00Z")
+                );
+
+        assertNull(lifecycle.removedAt());
+        assertTrue(lifecycle.isEffectiveAt(
+                Instant.parse("2026-11-15T12:00:00Z")
+        ));
+    }
+
+    @Test
+    void reconstructsRemovalAfterItWasRecorded() {
+        UUID id = UUID.randomUUID();
+
+        EquipmentModificationEvent installation =
+                new EquipmentModificationEvent(
+                        UUID.randomUUID(),
+                        id,
+                        EquipmentModificationEventType.RECORDED,
+                        INSTALLED,
+                        Instant.parse("2026-11-05T10:00:00Z")
+                );
+
+        EquipmentModificationEvent removal =
+                new EquipmentModificationEvent(
+                        UUID.randomUUID(),
+                        id,
+                        EquipmentModificationEventType.REMOVED,
+                        REMOVED,
+                        Instant.parse("2026-11-16T10:00:00Z")
+                );
+
+        EquipmentModificationLifecycle lifecycle =
+                EquipmentModificationLifecycle.reconstructAsKnownAt(
+                        id,
+                        List.of(installation, removal),
+                        Instant.parse("2026-11-17T10:00:00Z")
+                );
+
+        assertEquals(REMOVED, lifecycle.removedAt());
+        assertFalse(lifecycle.isEffectiveAt(REMOVED));
+    }
+
+    @Test
+    void includesEventsRecordedExactlyAtKnownTime() {
+        UUID id = UUID.randomUUID();
+
+        Instant recordedAt =
+                Instant.parse("2026-11-05T10:00:00Z");
+
+        EquipmentModificationLifecycle lifecycle =
+                EquipmentModificationLifecycle.reconstructAsKnownAt(
+                        id,
+                        List.of(new EquipmentModificationEvent(
+                                UUID.randomUUID(),
+                                id,
+                                EquipmentModificationEventType.RECORDED,
+                                INSTALLED,
+                                recordedAt
+                        )),
+                        recordedAt
+                );
+
+        assertEquals(INSTALLED, lifecycle.effectiveAt());
+    }
+
+    @Test
+    void rejectsReconstructionBeforeInitialRecording() {
+        UUID id = UUID.randomUUID();
+
+        EquipmentModificationEvent installation =
+                new EquipmentModificationEvent(
+                        UUID.randomUUID(),
+                        id,
+                        EquipmentModificationEventType.RECORDED,
+                        INSTALLED,
+                        Instant.parse("2026-11-05T10:00:00Z")
+                );
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> EquipmentModificationLifecycle.reconstructAsKnownAt(
+                        id,
+                        List.of(installation),
+                        Instant.parse("2026-11-04T10:00:00Z")
+                )
+        );
+    }
+
+    @Test
+    void rejectsNullKnownAtTimestamp() {
+        assertThrows(
+                NullPointerException.class,
+                () -> EquipmentModificationLifecycle.reconstructAsKnownAt(
+                        UUID.randomUUID(),
+                        List.of(),
+                        null
+                )
+        );
+    }
+
 }

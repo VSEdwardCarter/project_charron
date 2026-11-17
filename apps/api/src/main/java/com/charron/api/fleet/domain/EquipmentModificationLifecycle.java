@@ -100,4 +100,31 @@ public final class EquipmentModificationLifecycle {
         return !timestamp.isBefore(effectiveAt)
                 && (removedAt == null || timestamp.isBefore(removedAt));
     }
+
+
+    public static EquipmentModificationLifecycle reconstructAsKnownAt(
+            UUID modificationId,
+            List<EquipmentModificationEvent> events,
+            Instant knownAt
+    ) {
+        Objects.requireNonNull(
+                knownAt,
+                "Known-at timestamp is required"
+        );
+
+        Objects.requireNonNull(
+                events,
+                "Events are required"
+        );
+
+        List<EquipmentModificationEvent> knownEvents =
+                events.stream()
+                        .filter(Objects::nonNull)
+                        .filter(event ->
+                                !event.recordedAt().isAfter(knownAt))
+                        .toList();
+
+        return reconstruct(modificationId, knownEvents);
+    }
+
 }
