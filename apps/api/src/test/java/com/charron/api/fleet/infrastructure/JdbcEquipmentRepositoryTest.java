@@ -19,6 +19,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -322,5 +323,43 @@ class JdbcEquipmentRepositoryTest {
                 )
         );
     }
+
+
+    @Test
+    void retrievesEquipmentCapabilitiesById() {
+        UUID id = UUID.randomUUID();
+
+        repository.insertIdentity(new Equipment(
+                id,
+                "CHARRON Refrigerated Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        repository.insertCapability(
+                id, EquipmentCapability.CARGO_TRANSPORT
+        );
+
+        repository.insertCapability(
+                id, EquipmentCapability.ENCLOSED_CARGO
+        );
+
+        repository.insertCapability(
+                id, EquipmentCapability.TEMPERATURE_CONTROL
+        );
+
+        Set<EquipmentCapability> retrieved =
+                repository.findCapabilitiesByEquipmentId(id);
+
+        assertEquals(
+                Set.of(
+                        EquipmentCapability.CARGO_TRANSPORT,
+                        EquipmentCapability.ENCLOSED_CARGO,
+                        EquipmentCapability.TEMPERATURE_CONTROL
+                ),
+                retrieved
+        );
+    }
+
 
 }

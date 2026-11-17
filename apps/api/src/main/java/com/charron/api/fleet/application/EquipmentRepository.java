@@ -6,6 +6,7 @@ import com.charron.api.fleet.domain.EquipmentSpecifications;
 import com.charron.api.fleet.domain.EquipmentCapability;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public interface EquipmentRepository {
@@ -27,6 +28,11 @@ public interface EquipmentRepository {
 
 
     Optional<EquipmentSpecifications> findSpecificationsByEquipmentId(
+            UUID equipmentId
+    );
+
+
+    Set<EquipmentCapability> findCapabilitiesByEquipmentId(
             UUID equipmentId
     );
 

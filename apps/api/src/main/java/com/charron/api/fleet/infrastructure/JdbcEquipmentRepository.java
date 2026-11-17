@@ -14,13 +14,7 @@ import com.charron.api.fleet.domain.WeightSpecifications;
 import com.charron.api.fleet.domain.EquipmentCapability;
 
 
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-
-import java.util.Objects;
+import java.util.*;
 
 @Repository
 public class JdbcEquipmentRepository implements EquipmentRepository {
@@ -235,6 +229,38 @@ public class JdbcEquipmentRepository implements EquipmentRepository {
             );
         }
     }
+
+
+    @Override
+    public Set<EquipmentCapability> findCapabilitiesByEquipmentId(
+            UUID equipmentId
+    ) {
+        Objects.requireNonNull(
+                equipmentId, "Equipment ID is required"
+        );
+
+        String sql = """
+            SELECT capability
+            FROM equipment_capabilities
+            WHERE equipment_id = ?
+            """;
+
+        List<EquipmentCapability> results = jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> EquipmentCapability.valueOf(
+                        rs.getString("capability")
+                ),
+                equipmentId
+        );
+
+        Set<EquipmentCapability> capabilities =
+                EnumSet.noneOf(EquipmentCapability.class);
+
+        capabilities.addAll(results);
+
+        return capabilities;
+    }
+
 
 
 
