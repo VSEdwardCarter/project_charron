@@ -8,7 +8,10 @@ import com.charron.api.common.measurement.Dimensions;
 import com.charron.api.common.measurement.Weight;
 import com.charron.api.fleet.domain.EquipmentSpecifications;
 import com.charron.api.fleet.domain.WeightSpecifications;
+import com.charron.api.fleet.domain.EquipmentCapability;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.springframework.dao.DuplicateKeyException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -278,5 +281,46 @@ class JdbcEquipmentRepositoryTest {
         assertNull(retrieved.weightSpecifications().ratedPayloadCapacity());
     }
 
+
+    @Test
+    void insertsMultipleCapabilitiesAndRejectsDuplicates() {
+        UUID id = UUID.randomUUID();
+
+        repository.insertIdentity(new Equipment(
+                id,
+                "CHARRON Test Tractor",
+                EquipmentCategory.TRACTOR,
+                null
+        ));
+
+        repository.insertCapability(
+                id, EquipmentCapability.PROPULSION
+        );
+        repository.insertCapability(
+                id, EquipmentCapability.TOWING
+        );
+        repository.insertCapability(
+                id, EquipmentCapability.CARGO_TRANSPORT
+        );
+
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM equipment_capabilities
+                WHERE equipment_id = ?
+                """,
+                Integer.class,
+                id
+        );
+
+        assertEquals(3, count);
+
+        assertThrows(
+                DuplicateKeyException.class,
+                () -> repository.insertCapability(
+                        id, EquipmentCapability.TOWING
+                )
+        );
+    }
 
 }

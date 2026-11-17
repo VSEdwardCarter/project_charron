@@ -11,6 +11,7 @@ import com.charron.api.common.measurement.Dimensions;
 import com.charron.api.common.measurement.Weight;
 import com.charron.api.fleet.domain.EquipmentSpecifications;
 import com.charron.api.fleet.domain.WeightSpecifications;
+import com.charron.api.fleet.domain.EquipmentCapability;
 
 
 
@@ -200,6 +201,41 @@ public class JdbcEquipmentRepository implements EquipmentRepository {
     private static Weight weightOrNull(Long grams) {
         return grams == null ? null : new Weight(grams);
     }
+
+
+    @Override
+    public void insertCapability(
+            UUID equipmentId,
+            EquipmentCapability capability
+    ) {
+        Objects.requireNonNull(
+                equipmentId, "Equipment ID is required"
+        );
+        Objects.requireNonNull(
+                capability, "Equipment capability is required"
+        );
+
+        String sql = """
+            INSERT INTO equipment_capabilities (
+                equipment_id,
+                capability
+            )
+            VALUES (?, ?)
+            """;
+
+        int rows = jdbcTemplate.update(
+                sql,
+                equipmentId,
+                capability.name()
+        );
+
+        if (rows != 1) {
+            throw new IllegalStateException(
+                    "Expected exactly one equipment capability row"
+            );
+        }
+    }
+
 
 
 }
