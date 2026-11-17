@@ -1,6 +1,7 @@
 
 package com.charron.api.fleet.domain;
 
+import com.charron.api.common.measurement.Dimensions;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

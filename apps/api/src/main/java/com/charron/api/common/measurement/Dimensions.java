@@ -1,4 +1,4 @@
-package com.charron.api.fleet.domain;
+package com.charron.api.common.measurement;
 
 public record Dimensions(
         long lengthMm,
