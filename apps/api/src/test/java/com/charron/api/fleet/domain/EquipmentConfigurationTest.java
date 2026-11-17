@@ -234,4 +234,93 @@ class EquipmentConfigurationTest {
         );
     }
 
+
+    @Test
+    void configurationStartsWithoutWeightAdjustment() {
+        EquipmentConfiguration configuration =
+                createWeightTestConfiguration();
+
+        assertNull(configuration.getWeightAdjustment());
+    }
+
+    @Test
+    void assignsWeightAdjustment() {
+        EquipmentConfiguration configuration =
+                createWeightTestConfiguration();
+
+        ConfigurationWeightAdjustment adjustment =
+                new ConfigurationWeightAdjustment(400_000);
+
+        configuration.updateWeightAdjustment(adjustment);
+
+        assertEquals(
+                adjustment,
+                configuration.getWeightAdjustment()
+        );
+    }
+
+    @Test
+    void replacesWeightAdjustment() {
+        EquipmentConfiguration configuration =
+                createWeightTestConfiguration();
+
+        configuration.updateWeightAdjustment(
+                new ConfigurationWeightAdjustment(400_000)
+        );
+
+        configuration.updateWeightAdjustment(
+                new ConfigurationWeightAdjustment(-150_000)
+        );
+
+        assertEquals(
+                new ConfigurationWeightAdjustment(-150_000),
+                configuration.getWeightAdjustment()
+        );
+    }
+
+    @Test
+    void removesWeightAdjustmentWithoutChangingIdentity() {
+        UUID id = UUID.randomUUID();
+        UUID equipmentId = UUID.randomUUID();
+
+        EquipmentConfiguration configuration =
+                new EquipmentConfiguration(
+                        id,
+                        equipmentId,
+                        "Liftgate Configuration",
+                        true
+                );
+
+        configuration.updateWeightAdjustment(
+                new ConfigurationWeightAdjustment(400_000)
+        );
+
+        configuration.removeWeightAdjustment();
+
+        assertNull(configuration.getWeightAdjustment());
+        assertEquals(id, configuration.getId());
+        assertEquals(equipmentId, configuration.getEquipmentId());
+    }
+
+    @Test
+    void rejectsNullWeightAdjustmentUpdate() {
+        EquipmentConfiguration configuration =
+                createWeightTestConfiguration();
+
+        assertThrows(
+                NullPointerException.class,
+                () -> configuration.updateWeightAdjustment(null)
+        );
+    }
+
+    private EquipmentConfiguration createWeightTestConfiguration() {
+        return new EquipmentConfiguration(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "Liftgate Configuration",
+                true
+        );
+    }
+
+
 }

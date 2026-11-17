@@ -15,6 +15,7 @@ public class EquipmentConfiguration {
     private boolean active;
     private final Set<EquipmentCapability> capabilities =
             EnumSet.noneOf(EquipmentCapability.class);
+    private ConfigurationWeightAdjustment weightAdjustment;
 
     public EquipmentConfiguration(
             UUID id,
@@ -99,5 +100,24 @@ public class EquipmentConfiguration {
                 )
         );
     }
+
+
+    public ConfigurationWeightAdjustment getWeightAdjustment() {
+        return weightAdjustment;
+    }
+
+    public void updateWeightAdjustment(
+            ConfigurationWeightAdjustment adjustment
+    ) {
+        this.weightAdjustment = Objects.requireNonNull(
+                adjustment,
+                "Configuration weight adjustment is required"
+        );
+    }
+
+    public void removeWeightAdjustment() {
+        this.weightAdjustment = null;
+    }
+
 
 }
