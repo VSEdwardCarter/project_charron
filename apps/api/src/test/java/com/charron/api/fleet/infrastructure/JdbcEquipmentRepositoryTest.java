@@ -4,6 +4,10 @@ package com.charron.api.fleet.infrastructure;
 import com.charron.api.fleet.domain.Equipment;
 import com.charron.api.fleet.domain.EquipmentCategory;
 import com.charron.api.fleet.application.EquipmentRepository;
+import com.charron.api.common.measurement.Dimensions;
+import com.charron.api.common.measurement.Weight;
+import com.charron.api.fleet.domain.EquipmentSpecifications;
+import com.charron.api.fleet.domain.WeightSpecifications;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -101,5 +105,57 @@ class JdbcEquipmentRepositoryTest {
         assertEquals(id, retrieved.getId());
         assertNull(retrieved.getVin());
     }
+
+
+    @Test
+    void insertsEquipmentSpecifications() {
+        UUID id = UUID.randomUUID();
+
+        Equipment equipment = new Equipment(
+                id,
+                "CHARRON Test Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        );
+
+        repository.insertIdentity(equipment);
+
+        EquipmentSpecifications specifications =
+                new EquipmentSpecifications(
+                        new Dimensions(12000, 2500, 4000),
+                        new WeightSpecifications(
+                                new Weight(5000000),
+                                new Weight(15000000),
+                                new Weight(10000000)
+                        )
+                );
+
+        repository.insertSpecifications(id, specifications);
+
+        var stored = jdbcTemplate.queryForMap(
+                """
+                SELECT
+                    length_mm,
+                    width_mm,
+                    height_mm,
+                    weight_specifications_present,
+                    empty_weight_grams,
+                    gross_weight_rating_grams,
+                    rated_payload_capacity_grams
+                FROM equipment_specifications
+                WHERE equipment_id = ?
+                """,
+                id
+        );
+
+        assertEquals(12000L, stored.get("length_mm"));
+        assertEquals(2500L, stored.get("width_mm"));
+        assertEquals(4000L, stored.get("height_mm"));
+        assertEquals(true, stored.get("weight_specifications_present"));
+        assertEquals(5000000L, stored.get("empty_weight_grams"));
+        assertEquals(15000000L, stored.get("gross_weight_rating_grams"));
+        assertEquals(10000000L, stored.get("rated_payload_capacity_grams"));
+    }
+
 
 }
