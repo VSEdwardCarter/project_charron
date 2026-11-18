@@ -174,5 +174,30 @@ public class JdbcEquipmentConfigurationRepository
         return capabilities;
     }
 
+    @Override
+    public boolean removeCapability(
+            UUID configurationId,
+            EquipmentCapability capability
+    ) {
+        Objects.requireNonNull(
+                configurationId, "Configuration ID is required"
+        );
+        Objects.requireNonNull(
+                capability, "Configuration capability is required"
+        );
 
+        String sql = """
+            DELETE FROM equipment_configuration_capabilities
+            WHERE configuration_id = ?
+              AND capability = ?
+            """;
+
+        int rows = jdbcTemplate.update(
+                sql,
+                configurationId,
+                capability.name()
+        );
+
+        return rows == 1;
+    }
 }

@@ -23,5 +23,9 @@ public interface EquipmentConfigurationRepository {
             UUID configurationId
     );
 
+    boolean removeCapability(
+            UUID configurationId,
+            EquipmentCapability capability
+    );
 
 }

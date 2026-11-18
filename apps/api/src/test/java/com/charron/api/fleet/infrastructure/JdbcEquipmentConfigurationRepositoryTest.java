@@ -13,8 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @Transactional
@@ -247,6 +246,72 @@ class JdbcEquipmentConfigurationRepositoryTest {
                 equipmentRepository.findCapabilitiesByEquipmentId(
                         equipmentId
                 ).isEmpty()
+        );
+    }
+
+    @Test
+    void removesOnlySpecifiedConfigurationCapability() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID configurationId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Refrigerated Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        equipmentRepository.insertCapability(
+                equipmentId,
+                EquipmentCapability.CARGO_TRANSPORT
+        );
+
+        EquipmentConfiguration configuration =
+                new EquipmentConfiguration(
+                        configurationId,
+                        equipmentId,
+                        "Refrigerated Configuration",
+                        true
+                );
+
+        configurationRepository.insert(configuration);
+
+        configurationRepository.insertCapability(
+                configurationId,
+                EquipmentCapability.TEMPERATURE_CONTROL
+        );
+
+        configurationRepository.insertCapability(
+                configurationId,
+                EquipmentCapability.ENCLOSED_CARGO
+        );
+
+        boolean removed = configurationRepository.removeCapability(
+                configurationId,
+                EquipmentCapability.TEMPERATURE_CONTROL
+        );
+
+        assertTrue(removed);
+
+        assertEquals(
+                Set.of(EquipmentCapability.ENCLOSED_CARGO),
+                configurationRepository.findCapabilitiesByConfigurationId(
+                        configurationId
+                )
+        );
+
+        assertEquals(
+                Set.of(EquipmentCapability.CARGO_TRANSPORT),
+                equipmentRepository.findCapabilitiesByEquipmentId(
+                        equipmentId
+                )
+        );
+
+        assertFalse(
+                configurationRepository.removeCapability(
+                        configurationId,
+                        EquipmentCapability.TEMPERATURE_CONTROL
+                )
         );
     }
 
