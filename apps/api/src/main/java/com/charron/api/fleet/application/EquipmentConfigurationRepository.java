@@ -30,4 +30,8 @@ public interface EquipmentConfigurationRepository {
 
     boolean updateDetails(EquipmentConfiguration configuration);
 
+    boolean updateWeightAdjustment(
+            EquipmentConfiguration configuration
+    );
+
 }

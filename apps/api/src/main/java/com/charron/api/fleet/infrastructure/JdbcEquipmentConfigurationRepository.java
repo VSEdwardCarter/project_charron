@@ -226,4 +226,32 @@ public class JdbcEquipmentConfigurationRepository
         return rows == 1;
     }
 
+    @Override
+    public boolean updateWeightAdjustment(
+            EquipmentConfiguration configuration
+    ) {
+        Objects.requireNonNull(
+                configuration, "Equipment configuration is required"
+        );
+
+        ConfigurationWeightAdjustment adjustment =
+                configuration.getWeightAdjustment();
+
+        String sql = """
+            UPDATE equipment_configurations
+            SET weight_adjustment_grams = ?
+            WHERE id = ?
+              AND equipment_id = ?
+            """;
+
+        int rows = jdbcTemplate.update(
+                sql,
+                adjustment == null ? null : adjustment.grams(),
+                configuration.getId(),
+                configuration.getEquipmentId()
+        );
+
+        return rows == 1;
+    }
+
 }

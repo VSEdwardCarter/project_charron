@@ -367,4 +367,87 @@ class JdbcEquipmentConfigurationRepositoryTest {
                 retrieved.getWeightAdjustment()
         );
     }
+
+    @Test
+    void updatesAndRemovesConfigurationWeightAdjustment() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID configurationId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Test Tractor",
+                EquipmentCategory.TRACTOR,
+                null
+        ));
+
+        EquipmentConfiguration configuration =
+                new EquipmentConfiguration(
+                        configurationId,
+                        equipmentId,
+                        "Heavy Haul Configuration",
+                        true
+                );
+
+        configurationRepository.insert(configuration);
+
+        // Add a positive weight adjustment.
+        configuration.updateWeightAdjustment(
+                new ConfigurationWeightAdjustment(750000)
+        );
+
+        assertTrue(
+                configurationRepository.updateWeightAdjustment(
+                        configuration
+                )
+        );
+
+        assertEquals(
+                new ConfigurationWeightAdjustment(750000),
+                configurationRepository.findById(configurationId)
+                        .orElseThrow()
+                        .getWeightAdjustment()
+        );
+
+        // Change to a negative weight adjustment.
+        configuration.updateWeightAdjustment(
+                new ConfigurationWeightAdjustment(-250000)
+        );
+
+        assertTrue(
+                configurationRepository.updateWeightAdjustment(
+                        configuration
+                )
+        );
+
+        assertEquals(
+                new ConfigurationWeightAdjustment(-250000),
+                configurationRepository.findById(configurationId)
+                        .orElseThrow()
+                        .getWeightAdjustment()
+        );
+
+        // Remove the adjustment entirely.
+        configuration.removeWeightAdjustment();
+
+        assertTrue(
+                configurationRepository.updateWeightAdjustment(
+                        configuration
+                )
+        );
+
+        EquipmentConfiguration retrieved =
+                configurationRepository.findById(configurationId)
+                        .orElseThrow();
+
+        assertNull(retrieved.getWeightAdjustment());
+
+        // Unrelated configuration fields remain unchanged.
+        assertEquals(
+                "Heavy Haul Configuration",
+                retrieved.getName()
+        );
+
+        assertTrue(retrieved.isActive());
+    }
+
 }
