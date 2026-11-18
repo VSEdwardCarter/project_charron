@@ -4,6 +4,7 @@ package com.charron.api.fleet.infrastructure;
 import com.charron.api.fleet.application.EquipmentModificationRepository;
 import com.charron.api.fleet.domain.EquipmentModification;
 import com.charron.api.fleet.domain.EquipmentModificationEvent;
+import com.charron.api.fleet.domain.EquipmentModificationEventType;
 import com.charron.api.fleet.domain.EquipmentModificationType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -148,5 +149,40 @@ public class JdbcEquipmentModificationRepository
         }
     }
 
+
+    @Override
+    public List<EquipmentModificationEvent> findEventsByModificationId(
+            UUID modificationId
+    ) {
+        Objects.requireNonNull(
+                modificationId, "Modification ID is required"
+        );
+
+        String sql = """
+            SELECT
+                id,
+                modification_id,
+                type,
+                effective_at,
+                recorded_at
+            FROM equipment_modification_events
+            WHERE modification_id = ?
+            ORDER BY recorded_at ASC, id ASC
+            """;
+
+        return jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> new EquipmentModificationEvent(
+                        rs.getObject("id", UUID.class),
+                        rs.getObject("modification_id", UUID.class),
+                        EquipmentModificationEventType.valueOf(
+                                rs.getString("type")
+                        ),
+                        rs.getTimestamp("effective_at").toInstant(),
+                        rs.getTimestamp("recorded_at").toInstant()
+                ),
+                modificationId
+        );
+    }
 
 }

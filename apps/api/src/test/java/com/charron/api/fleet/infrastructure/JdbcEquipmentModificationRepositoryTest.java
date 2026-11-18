@@ -12,6 +12,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -238,6 +239,82 @@ class JdbcEquipmentModificationRepositoryTest {
                 ((java.sql.Timestamp) stored.get("recorded_at"))
                         .toInstant()
         );
+    }
+
+
+    @Test
+    void retrievesModificationLifecycleEvents() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID modificationId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Test Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        Instant installedAt =
+                Instant.parse("2026-11-10T10:00:00Z");
+
+        Instant installationRecordedAt =
+                Instant.parse("2026-11-14T15:30:00Z");
+
+        EquipmentModification modification =
+                new EquipmentModification(
+                        modificationId,
+                        equipmentId,
+                        null,
+                        EquipmentModificationType.INSTALLATION,
+                        "Installed hydraulic liftgate",
+                        installedAt,
+                        installationRecordedAt
+                );
+
+        modificationRepository.insert(modification);
+
+        EquipmentModificationEvent recordedEvent =
+                new EquipmentModificationEvent(
+                        UUID.randomUUID(),
+                        modificationId,
+                        EquipmentModificationEventType.RECORDED,
+                        installedAt,
+                        installationRecordedAt
+                );
+
+        EquipmentModificationEvent removedEvent =
+                new EquipmentModificationEvent(
+                        UUID.randomUUID(),
+                        modificationId,
+                        EquipmentModificationEventType.REMOVED,
+                        Instant.parse("2026-11-15T12:00:00Z"),
+                        Instant.parse("2026-11-18T09:00:00Z")
+                );
+
+        // Insert out of chronological order.
+        modificationRepository.insertEvent(removedEvent);
+        modificationRepository.insertEvent(recordedEvent);
+
+        List<EquipmentModificationEvent> events =
+                modificationRepository.findEventsByModificationId(
+                        modificationId
+                );
+
+        assertEquals(
+                List.of(recordedEvent, removedEvent),
+                events
+        );
+    }
+
+
+    @Test
+    void returnsEmptyListWhenNoModificationEventsExist() {
+        List<EquipmentModificationEvent> events =
+                modificationRepository.findEventsByModificationId(
+                        UUID.randomUUID()
+                );
+
+        assertTrue(events.isEmpty());
     }
 
 
