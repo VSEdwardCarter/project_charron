@@ -8,10 +8,7 @@ import com.charron.api.fleet.domain.EquipmentConfiguration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.util.Objects;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Repository
 public class JdbcEquipmentConfigurationRepository
@@ -144,6 +141,37 @@ public class JdbcEquipmentConfigurationRepository
                     "Expected exactly one configuration capability row"
             );
         }
+    }
+
+
+    @Override
+    public Set<EquipmentCapability> findCapabilitiesByConfigurationId(
+            UUID configurationId
+    ) {
+        Objects.requireNonNull(
+                configurationId, "Configuration ID is required"
+        );
+
+        String sql = """
+            SELECT capability
+            FROM equipment_configuration_capabilities
+            WHERE configuration_id = ?
+            """;
+
+        List<EquipmentCapability> results = jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> EquipmentCapability.valueOf(
+                        rs.getString("capability")
+                ),
+                configurationId
+        );
+
+        Set<EquipmentCapability> capabilities =
+                EnumSet.noneOf(EquipmentCapability.class);
+
+        capabilities.addAll(results);
+
+        return capabilities;
     }
 
 

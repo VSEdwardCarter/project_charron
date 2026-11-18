@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -196,4 +197,57 @@ class JdbcEquipmentConfigurationRepositoryTest {
 
         assertEquals(1, equipmentCount);
     }
+
+    @Test
+    void retrievesConfigurationCapabilitiesById() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID configurationId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Test Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        EquipmentConfiguration configuration =
+                new EquipmentConfiguration(
+                        configurationId,
+                        equipmentId,
+                        "Refrigerated Configuration",
+                        true
+                );
+
+        configurationRepository.insert(configuration);
+
+        configurationRepository.insertCapability(
+                configurationId,
+                EquipmentCapability.TEMPERATURE_CONTROL
+        );
+
+        configurationRepository.insertCapability(
+                configurationId,
+                EquipmentCapability.ENCLOSED_CARGO
+        );
+
+        Set<EquipmentCapability> retrieved =
+                configurationRepository.findCapabilitiesByConfigurationId(
+                        configurationId
+                );
+
+        assertEquals(
+                Set.of(
+                        EquipmentCapability.TEMPERATURE_CONTROL,
+                        EquipmentCapability.ENCLOSED_CARGO
+                ),
+                retrieved
+        );
+
+        assertTrue(
+                equipmentRepository.findCapabilitiesByEquipmentId(
+                        equipmentId
+                ).isEmpty()
+        );
+    }
+
 }
