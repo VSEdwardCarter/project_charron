@@ -315,4 +315,56 @@ class JdbcEquipmentConfigurationRepositoryTest {
         );
     }
 
+
+    @Test
+    void updatesConfigurationNameAndActiveStatus() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID configurationId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Test Tractor",
+                EquipmentCategory.TRACTOR,
+                null
+        ));
+
+        EquipmentConfiguration configuration =
+                new EquipmentConfiguration(
+                        configurationId,
+                        equipmentId,
+                        "Original Configuration",
+                        false
+                );
+
+        configuration.updateWeightAdjustment(
+                new ConfigurationWeightAdjustment(500000)
+        );
+
+        configurationRepository.insert(configuration);
+
+        configuration.setName("Updated Heavy Haul Configuration");
+        configuration.activate();
+
+        boolean updated = configurationRepository.updateDetails(
+                configuration
+        );
+
+        assertTrue(updated);
+
+        EquipmentConfiguration retrieved =
+                configurationRepository.findById(configurationId)
+                        .orElseThrow();
+
+        assertEquals(
+                "Updated Heavy Haul Configuration",
+                retrieved.getName()
+        );
+
+        assertTrue(retrieved.isActive());
+
+        assertEquals(
+                new ConfigurationWeightAdjustment(500000),
+                retrieved.getWeightAdjustment()
+        );
+    }
 }

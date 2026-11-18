@@ -200,4 +200,30 @@ public class JdbcEquipmentConfigurationRepository
 
         return rows == 1;
     }
+
+    @Override
+    public boolean updateDetails(EquipmentConfiguration configuration) {
+        Objects.requireNonNull(
+                configuration, "Equipment configuration is required"
+        );
+
+        String sql = """
+            UPDATE equipment_configurations
+            SET name = ?,
+                active = ?
+            WHERE id = ?
+              AND equipment_id = ?
+            """;
+
+        int rows = jdbcTemplate.update(
+                sql,
+                configuration.getName(),
+                configuration.isActive(),
+                configuration.getId(),
+                configuration.getEquipmentId()
+        );
+
+        return rows == 1;
+    }
+
 }

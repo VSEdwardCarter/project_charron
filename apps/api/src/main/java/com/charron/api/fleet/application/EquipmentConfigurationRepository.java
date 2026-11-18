@@ -28,4 +28,6 @@ public interface EquipmentConfigurationRepository {
             EquipmentCapability capability
     );
 
+    boolean updateDetails(EquipmentConfiguration configuration);
+
 }
