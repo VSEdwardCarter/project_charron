@@ -3,6 +3,7 @@ package com.charron.api.fleet.infrastructure;
 
 import com.charron.api.fleet.application.EquipmentModificationRepository;
 import com.charron.api.fleet.domain.EquipmentModification;
+import com.charron.api.fleet.domain.EquipmentModificationEvent;
 import com.charron.api.fleet.domain.EquipmentModificationType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -113,5 +114,39 @@ public class JdbcEquipmentModificationRepository
 
         return results.stream().findFirst();
     }
+
+    @Override
+    public void insertEvent(EquipmentModificationEvent event) {
+        Objects.requireNonNull(
+                event, "Equipment modification event is required"
+        );
+
+        String sql = """
+            INSERT INTO equipment_modification_events (
+                id,
+                modification_id,
+                type,
+                effective_at,
+                recorded_at
+            )
+            VALUES (?, ?, ?, ?, ?)
+            """;
+
+        int rows = jdbcTemplate.update(
+                sql,
+                event.id(),
+                event.modificationId(),
+                event.type().name(),
+                java.sql.Timestamp.from(event.effectiveAt()),
+                java.sql.Timestamp.from(event.recordedAt())
+        );
+
+        if (rows != 1) {
+            throw new IllegalStateException(
+                    "Expected exactly one equipment modification event row"
+            );
+        }
+    }
+
 
 }

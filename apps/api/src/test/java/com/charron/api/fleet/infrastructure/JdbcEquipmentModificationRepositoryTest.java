@@ -3,10 +3,7 @@ package com.charron.api.fleet.infrastructure;
 
 import com.charron.api.fleet.application.EquipmentModificationRepository;
 import com.charron.api.fleet.application.EquipmentRepository;
-import com.charron.api.fleet.domain.Equipment;
-import com.charron.api.fleet.domain.EquipmentCategory;
-import com.charron.api.fleet.domain.EquipmentModification;
-import com.charron.api.fleet.domain.EquipmentModificationType;
+import com.charron.api.fleet.domain.*;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -160,6 +157,86 @@ class JdbcEquipmentModificationRepositoryTest {
         assertTrue(
                 modificationRepository.findById(nonexistentId)
                         .isEmpty()
+        );
+    }
+
+
+    @Test
+    void insertsEquipmentModificationLifecycleEvent() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID modificationId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Test Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        Instant effectiveAt =
+                Instant.parse("2026-11-10T10:00:00Z");
+
+        Instant recordedAt =
+                Instant.parse("2026-11-14T15:30:00Z");
+
+        EquipmentModification modification =
+                new EquipmentModification(
+                        modificationId,
+                        equipmentId,
+                        null,
+                        EquipmentModificationType.INSTALLATION,
+                        "Installed hydraulic liftgate",
+                        effectiveAt,
+                        recordedAt
+                );
+
+        modificationRepository.insert(modification);
+
+        EquipmentModificationEvent event =
+                new EquipmentModificationEvent(
+                        eventId,
+                        modificationId,
+                        EquipmentModificationEventType.RECORDED,
+                        effectiveAt,
+                        recordedAt
+                );
+
+        modificationRepository.insertEvent(event);
+
+        var stored = jdbcTemplate.queryForMap(
+                """
+                SELECT
+                    modification_id,
+                    type,
+                    effective_at,
+                    recorded_at
+                FROM equipment_modification_events
+                WHERE id = ?
+                """,
+                eventId
+        );
+
+        assertEquals(
+                modificationId,
+                stored.get("modification_id")
+        );
+
+        assertEquals(
+                "RECORDED",
+                stored.get("type")
+        );
+
+        assertEquals(
+                effectiveAt,
+                ((java.sql.Timestamp) stored.get("effective_at"))
+                        .toInstant()
+        );
+
+        assertEquals(
+                recordedAt,
+                ((java.sql.Timestamp) stored.get("recorded_at"))
+                        .toInstant()
         );
     }
 
