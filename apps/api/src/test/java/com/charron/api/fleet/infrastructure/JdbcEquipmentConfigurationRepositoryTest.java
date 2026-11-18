@@ -3,10 +3,7 @@ package com.charron.api.fleet.infrastructure;
 
 import com.charron.api.fleet.application.EquipmentConfigurationRepository;
 import com.charron.api.fleet.application.EquipmentRepository;
-import com.charron.api.fleet.domain.ConfigurationWeightAdjustment;
-import com.charron.api.fleet.domain.Equipment;
-import com.charron.api.fleet.domain.EquipmentCategory;
-import com.charron.api.fleet.domain.EquipmentConfiguration;
+import com.charron.api.fleet.domain.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -135,5 +132,68 @@ class JdbcEquipmentConfigurationRepositoryTest {
                 configurationRepository.findById(nonexistentId)
                         .isEmpty()
         );
+    }
+
+
+    @Test
+    void insertsConfigurationCapabilitiesIndependentlyOfEquipment() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID configurationId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Refrigerated Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        equipmentRepository.insertCapability(
+                equipmentId,
+                EquipmentCapability.CARGO_TRANSPORT
+        );
+
+        EquipmentConfiguration configuration =
+                new EquipmentConfiguration(
+                        configurationId,
+                        equipmentId,
+                        "Refrigerated Configuration",
+                        true
+                );
+
+        configurationRepository.insert(configuration);
+
+        configurationRepository.insertCapability(
+                configurationId,
+                EquipmentCapability.TEMPERATURE_CONTROL
+        );
+
+        configurationRepository.insertCapability(
+                configurationId,
+                EquipmentCapability.ENCLOSED_CARGO
+        );
+
+        Integer configurationCount = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM equipment_configuration_capabilities
+                WHERE configuration_id = ?
+                """,
+                Integer.class,
+                configurationId
+        );
+
+        assertEquals(2, configurationCount);
+
+        Integer equipmentCount = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*)
+                FROM equipment_capabilities
+                WHERE equipment_id = ?
+                """,
+                Integer.class,
+                equipmentId
+        );
+
+        assertEquals(1, equipmentCount);
     }
 }

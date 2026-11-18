@@ -3,6 +3,7 @@ package com.charron.api.fleet.infrastructure;
 
 import com.charron.api.fleet.application.EquipmentConfigurationRepository;
 import com.charron.api.fleet.domain.ConfigurationWeightAdjustment;
+import com.charron.api.fleet.domain.EquipmentCapability;
 import com.charron.api.fleet.domain.EquipmentConfiguration;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -110,5 +111,40 @@ public class JdbcEquipmentConfigurationRepository
 
         return results.stream().findFirst();
     }
+
+
+    @Override
+    public void insertCapability(
+            UUID configurationId,
+            EquipmentCapability capability
+    ) {
+        Objects.requireNonNull(
+                configurationId, "Configuration ID is required"
+        );
+        Objects.requireNonNull(
+                capability, "Configuration capability is required"
+        );
+
+        String sql = """
+            INSERT INTO equipment_configuration_capabilities (
+                configuration_id,
+                capability
+            )
+            VALUES (?, ?)
+            """;
+
+        int rows = jdbcTemplate.update(
+                sql,
+                configurationId,
+                capability.name()
+        );
+
+        if (rows != 1) {
+            throw new IllegalStateException(
+                    "Expected exactly one configuration capability row"
+            );
+        }
+    }
+
 
 }
