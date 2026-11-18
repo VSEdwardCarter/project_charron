@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @Transactional
@@ -78,6 +79,61 @@ class JdbcEquipmentConfigurationRepositoryTest {
         assertEquals(
                 750000L,
                 stored.get("weight_adjustment_grams")
+        );
+    }
+
+
+    @Test
+    void retrievesEquipmentConfigurationById() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID configurationId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Test Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        EquipmentConfiguration original =
+                new EquipmentConfiguration(
+                        configurationId,
+                        equipmentId,
+                        "Lightweight Configuration",
+                        false
+                );
+
+        original.updateWeightAdjustment(
+                new ConfigurationWeightAdjustment(-250000)
+        );
+
+        configurationRepository.insert(original);
+
+        EquipmentConfiguration retrieved =
+                configurationRepository.findById(configurationId)
+                        .orElseThrow();
+
+        assertEquals(original.getId(), retrieved.getId());
+        assertEquals(
+                original.getEquipmentId(),
+                retrieved.getEquipmentId()
+        );
+        assertEquals(original.getName(), retrieved.getName());
+        assertEquals(original.isActive(), retrieved.isActive());
+
+        assertEquals(
+                original.getWeightAdjustment(),
+                retrieved.getWeightAdjustment()
+        );
+    }
+
+    @Test
+    void returnsEmptyWhenConfigurationDoesNotExist() {
+        UUID nonexistentId = UUID.randomUUID();
+
+        assertTrue(
+                configurationRepository.findById(nonexistentId)
+                        .isEmpty()
         );
     }
 }

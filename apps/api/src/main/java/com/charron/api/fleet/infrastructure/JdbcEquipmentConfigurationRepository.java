@@ -8,6 +8,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.util.Objects;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public class JdbcEquipmentConfigurationRepository
@@ -56,4 +59,56 @@ public class JdbcEquipmentConfigurationRepository
             );
         }
     }
+
+    @Override
+    public Optional<EquipmentConfiguration> findById(
+            UUID configurationId
+    ) {
+        Objects.requireNonNull(
+                configurationId, "Configuration ID is required"
+        );
+
+        String sql = """
+            SELECT
+                id,
+                equipment_id,
+                name,
+                active,
+                weight_adjustment_grams
+            FROM equipment_configurations
+            WHERE id = ?
+            """;
+
+        List<EquipmentConfiguration> results = jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> {
+                    EquipmentConfiguration configuration =
+                            new EquipmentConfiguration(
+                                    rs.getObject("id", UUID.class),
+                                    rs.getObject("equipment_id", UUID.class),
+                                    rs.getString("name"),
+                                    rs.getBoolean("active")
+                            );
+
+                    Long adjustmentGrams = rs.getObject(
+                            "weight_adjustment_grams",
+                            Long.class
+                    );
+
+                    if (adjustmentGrams != null) {
+                        configuration.updateWeightAdjustment(
+                                new ConfigurationWeightAdjustment(
+                                        adjustmentGrams
+                                )
+                        );
+                    }
+
+                    return configuration;
+                },
+                configurationId
+        );
+
+        return results.stream().findFirst();
+    }
+
 }
