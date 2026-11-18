@@ -17,8 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @Transactional
@@ -111,4 +110,58 @@ class JdbcEquipmentModificationRepositoryTest {
 
         assertNull(stored.get("removed_at"));
     }
+
+    @Test
+    void retrievesEquipmentModificationById() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID modificationId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Test Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        Instant effectiveAt =
+                Instant.parse("2026-11-10T10:00:00Z");
+
+        Instant recordedAt =
+                Instant.parse("2026-11-14T15:30:00Z");
+
+        Instant removedAt =
+                Instant.parse("2026-11-16T12:00:00Z");
+
+        EquipmentModification original =
+                new EquipmentModification(
+                        modificationId,
+                        equipmentId,
+                        null,
+                        EquipmentModificationType.INSTALLATION,
+                        "Installed hydraulic liftgate",
+                        effectiveAt,
+                        recordedAt,
+                        removedAt
+                );
+
+        modificationRepository.insert(original);
+
+        EquipmentModification retrieved =
+                modificationRepository.findById(modificationId)
+                        .orElseThrow();
+
+        assertEquals(original, retrieved);
+    }
+
+    @Test
+    void returnsEmptyWhenModificationDoesNotExist() {
+        UUID nonexistentId = UUID.randomUUID();
+
+        assertTrue(
+                modificationRepository.findById(nonexistentId)
+                        .isEmpty()
+        );
+    }
+
+
 }

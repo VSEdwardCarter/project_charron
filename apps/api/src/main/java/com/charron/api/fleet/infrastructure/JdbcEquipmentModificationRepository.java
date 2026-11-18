@@ -3,10 +3,14 @@ package com.charron.api.fleet.infrastructure;
 
 import com.charron.api.fleet.application.EquipmentModificationRepository;
 import com.charron.api.fleet.domain.EquipmentModification;
+import com.charron.api.fleet.domain.EquipmentModificationType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public class JdbcEquipmentModificationRepository
@@ -60,4 +64,54 @@ public class JdbcEquipmentModificationRepository
             );
         }
     }
+
+    @Override
+    public Optional<EquipmentModification> findById(
+            UUID modificationId
+    ) {
+        Objects.requireNonNull(
+                modificationId, "Modification ID is required"
+        );
+
+        String sql = """
+            SELECT
+                id,
+                equipment_id,
+                configuration_id,
+                type,
+                description,
+                effective_at,
+                recorded_at,
+                removed_at
+            FROM equipment_modifications
+            WHERE id = ?
+            """;
+
+        List<EquipmentModification> results = jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> {
+                    java.sql.Timestamp removedAt =
+                            rs.getTimestamp("removed_at");
+
+                    return new EquipmentModification(
+                            rs.getObject("id", UUID.class),
+                            rs.getObject("equipment_id", UUID.class),
+                            rs.getObject("configuration_id", UUID.class),
+                            EquipmentModificationType.valueOf(
+                                    rs.getString("type")
+                            ),
+                            rs.getString("description"),
+                            rs.getTimestamp("effective_at").toInstant(),
+                            rs.getTimestamp("recorded_at").toInstant(),
+                            removedAt == null
+                                    ? null
+                                    : removedAt.toInstant()
+                    );
+                },
+                modificationId
+        );
+
+        return results.stream().findFirst();
+    }
+
 }
