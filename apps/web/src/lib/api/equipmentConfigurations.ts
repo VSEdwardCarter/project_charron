@@ -1,10 +1,13 @@
 
+
 export interface EquipmentConfiguration {
     id: string
     equipmentId: string
     name: string
     active: boolean
+    weightAdjustmentGrams: number | null
 }
+
 
 export async function getEquipmentConfigurations(
     equipmentId: string
@@ -149,4 +152,29 @@ export async function removeConfigurationCapability(
     }
 }
 
+
+export async function updateConfigurationWeightAdjustment(
+    equipmentId: string,
+    configurationId: string,
+    grams: number | null
+): Promise<EquipmentConfiguration> {
+    const response = await fetch(
+        `/api/equipment/${encodeURIComponent(equipmentId)}/configurations/${encodeURIComponent(configurationId)}/weight-adjustment`,
+        {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ grams }),
+        }
+    )
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to update configuration weight adjustment (${response.status})`
+        )
+    }
+
+    return (await response.json()) as EquipmentConfiguration
+}
 

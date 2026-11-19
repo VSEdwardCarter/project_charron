@@ -11,7 +11,7 @@
         removeConfigurationCapability,
         EQUIPMENT_CAPABILITIES,
         type EquipmentConfiguration,
-        type EquipmentCapability,
+        type EquipmentCapability, updateConfigurationWeightAdjustment,
     } from '../../lib/api/equipmentConfigurations'
 
 
@@ -30,6 +30,101 @@
     let capabilitiesLoading = $state(false)
     let capabilitiesSaving = $state(false)
     let capabilitiesError = $state<string | null>(null)
+
+    let editingWeightId = $state<string | null>(null)
+    let weightAdjustmentKg = $state('')
+    let weightSaving = $state(false)
+    let weightError = $state<string | null>(null)
+
+    function startWeightEdit(configuration: EquipmentConfiguration): void {
+        editingWeightId = configuration.id
+        weightAdjustmentKg = configuration.weightAdjustmentGrams === null
+            ? ''
+            : String(configuration.weightAdjustmentGrams / 1000)
+        weightError = null
+    }
+
+    function cancelWeightEdit(): void {
+        editingWeightId = null
+        weightAdjustmentKg = ''
+        weightError = null
+    }
+
+    async function saveWeightAdjustment(
+        configuration: EquipmentConfiguration
+    ): Promise<void> {
+        if (weightSaving) return
+
+
+        const input = String(weightAdjustmentKg ?? '').trim()
+        const kilograms = Number(input)
+
+        if (input === '' || !Number.isFinite(kilograms)) {
+            weightError = 'Enter a valid weight adjustment in kilograms.'
+            return
+        }
+
+
+        const grams = Math.round(kilograms * 1000)
+
+        if (!Number.isSafeInteger(grams)) {
+            weightError = 'Weight adjustment is outside the supported range.'
+            return
+        }
+
+        weightSaving = true
+        weightError = null
+
+        try {
+            const updated = await updateConfigurationWeightAdjustment(
+                equipmentId,
+                configuration.id,
+                grams
+            )
+
+            configurations = configurations.map(item =>
+                item.id === updated.id ? updated : item
+            )
+
+            cancelWeightEdit()
+        } catch (err) {
+            weightError = err instanceof Error
+                ? err.message
+                : 'Unable to save weight adjustment'
+        } finally {
+            weightSaving = false
+        }
+    }
+
+    async function clearWeightAdjustment(
+        configuration: EquipmentConfiguration
+    ): Promise<void> {
+        if (weightSaving) return
+
+        weightSaving = true
+        weightError = null
+
+        try {
+            const updated = await updateConfigurationWeightAdjustment(
+                equipmentId,
+                configuration.id,
+                null
+            )
+
+            configurations = configurations.map(item =>
+                item.id === updated.id ? updated : item
+            )
+
+            cancelWeightEdit()
+        } catch (err) {
+            weightError = err instanceof Error
+                ? err.message
+                : 'Unable to clear weight adjustment'
+        } finally {
+            weightSaving = false
+        }
+    }
+
 
     async function toggleConfigurationCapabilities(
         configurationId: string
@@ -425,6 +520,96 @@
                             {/if}
                         </div>
                     {/if}
+                        <div class="mt-4 border-t border-slate-700 pt-4">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-medium text-white">
+                                        Weight Adjustment
+                                    </p>
+                                    <p class="mt-1 text-xs text-slate-400">
+                                        {configuration.weightAdjustmentGrams === null
+                                            ? 'Not configured'
+                                            : `${configuration.weightAdjustmentGrams / 1000} kg`}
+                                    </p>
+                                </div>
+
+                                {#if editingWeightId !== configuration.id}
+                                    <button
+                                            type="button"
+                                            onclick={() => startWeightEdit(configuration)}
+                                            class="rounded-full border border-slate-600 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-700"
+                                    >
+                                        {configuration.weightAdjustmentGrams === null
+                                            ? 'Set Adjustment'
+                                            : 'Edit Adjustment'}
+                                    </button>
+                                {/if}
+                            </div>
+
+                            {#if editingWeightId === configuration.id}
+                                <div class="mt-4 space-y-3">
+                                    <label
+                                            for="configuration-weight-kg"
+                                            class="block text-sm text-slate-300"
+                                    >
+                                        Adjustment (kg)
+                                    </label>
+
+                                    <input
+                                            id="configuration-weight-kg"
+                                            type="number"
+                                            step="0.001"
+                                            bind:value={weightAdjustmentKg}
+                                            placeholder="e.g. 25 or -10"
+                                            class="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-3 text-white"
+                                    />
+
+                                    <p class="text-xs text-slate-400">
+                                        Positive values add weight; negative values reduce weight.
+                                        This does not change the equipment's baseline specifications.
+                                    </p>
+
+                                    {#if weightError}
+                                        <p role="alert" class="text-sm text-red-400">
+                                            {weightError}
+                                        </p>
+                                    {/if}
+
+                                    <div class="flex flex-wrap gap-2">
+                                        <button
+                                                type="button"
+                                                onclick={() => saveWeightAdjustment(configuration)}
+                                                disabled={weightSaving}
+                                                class="rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                                        >
+                                            {weightSaving ? 'Saving...' : 'Save Adjustment'}
+                                        </button>
+
+                                        {#if configuration.weightAdjustmentGrams !== null}
+                                            <button
+                                                    type="button"
+                                                    onclick={() => clearWeightAdjustment(configuration)}
+                                                    disabled={weightSaving}
+                                                    class="rounded-full border border-amber-700 px-4 py-2 text-sm text-amber-400 disabled:opacity-50"
+                                            >
+                                                Clear Adjustment
+                                            </button>
+                                        {/if}
+
+                                        <button
+                                                type="button"
+                                                onclick={cancelWeightEdit}
+                                                disabled={weightSaving}
+                                                class="rounded-full border border-slate-700 px-4 py-2 text-sm text-slate-300 disabled:opacity-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            {/if}
+                        </div>
+
+
                 </div>
             {/each}
         </div>

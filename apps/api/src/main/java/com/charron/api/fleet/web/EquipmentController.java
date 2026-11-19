@@ -412,18 +412,24 @@ public class EquipmentController {
                                 configuration.getId(),
                                 configuration.getEquipmentId(),
                                 configuration.getName(),
-                                configuration.isActive()
+                                configuration.isActive(),
+                                configuration.getWeightAdjustment() == null
+                                        ? null
+                                        : configuration.getWeightAdjustment().grams()
+
                         ))
                         .toList();
 
         return ResponseEntity.ok(configurations);
     }
 
+
     public record EquipmentConfigurationResponse(
             UUID id,
             UUID equipmentId,
             String name,
-            boolean active
+            boolean active,
+            Long weightAdjustmentGrams
     ) {
     }
 
@@ -456,7 +462,11 @@ public class EquipmentController {
                     configuration.getId(),
                     configuration.getEquipmentId(),
                     configuration.getName(),
-                    configuration.isActive()
+                    configuration.isActive(),
+                    configuration.getWeightAdjustment() == null
+                            ? null
+                            : configuration.getWeightAdjustment().grams()
+
             );
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(
@@ -522,7 +532,11 @@ public class EquipmentController {
                     configuration.getId(),
                     configuration.getEquipmentId(),
                     configuration.getName(),
-                    configuration.isActive()
+                    configuration.isActive(),
+                    configuration.getWeightAdjustment() == null
+                            ? null
+                            : configuration.getWeightAdjustment().grams()
+
             );
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(
@@ -532,6 +546,65 @@ public class EquipmentController {
             );
         }
     }
+
+    @PutMapping("/{id}/configurations/{configurationId}/weight-adjustment")
+    public EquipmentConfigurationResponse updateConfigurationWeightAdjustment(
+            @PathVariable UUID id,
+            @PathVariable UUID configurationId,
+            @RequestBody ConfigurationWeightAdjustmentRequest request
+    ) {
+        requireConfiguration(id, configurationId);
+
+        if (request == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Weight adjustment request is required"
+            );
+        }
+
+        EquipmentConfiguration configuration =
+                configurationRepository.findById(configurationId)
+                        .orElseThrow(() -> new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Configuration not found"
+                        ));
+
+        if (request.grams() == null) {
+            configuration.removeWeightAdjustment();
+        } else {
+            configuration.updateWeightAdjustment(
+                    new ConfigurationWeightAdjustment(
+                            request.grams()
+                    )
+            );
+        }
+
+        boolean updated =
+                configurationRepository.updateWeightAdjustment(configuration);
+
+        if (!updated) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Configuration could not be updated"
+            );
+        }
+
+        return new EquipmentConfigurationResponse(
+                configuration.getId(),
+                configuration.getEquipmentId(),
+                configuration.getName(),
+                configuration.isActive(),
+                configuration.getWeightAdjustment() == null
+                        ? null
+                        : configuration.getWeightAdjustment().grams()
+        );
+    }
+
+    public record ConfigurationWeightAdjustmentRequest(
+            Long grams
+    ) {
+    }
+
 
 
 }

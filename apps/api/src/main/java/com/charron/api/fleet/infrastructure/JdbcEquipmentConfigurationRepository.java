@@ -255,6 +255,7 @@ public class JdbcEquipmentConfigurationRepository
     }
 
 
+
     @Override
     public List<EquipmentConfiguration> findByEquipmentId(
             UUID equipmentId
@@ -265,7 +266,12 @@ public class JdbcEquipmentConfigurationRepository
         );
 
         String sql = """
-            SELECT id, equipment_id, name, active
+            SELECT
+                id,
+                equipment_id,
+                name,
+                active,
+                weight_adjustment_grams
             FROM equipment_configurations
             WHERE equipment_id = ?
             ORDER BY name ASC, id ASC
@@ -273,15 +279,34 @@ public class JdbcEquipmentConfigurationRepository
 
         return jdbcTemplate.query(
                 sql,
-                (rs, rowNum) -> new EquipmentConfiguration(
-                        rs.getObject("id", UUID.class),
-                        rs.getObject("equipment_id", UUID.class),
-                        rs.getString("name"),
-                        rs.getBoolean("active")
-                ),
+                (rs, rowNum) -> {
+                    EquipmentConfiguration configuration =
+                            new EquipmentConfiguration(
+                                    rs.getObject("id", UUID.class),
+                                    rs.getObject("equipment_id", UUID.class),
+                                    rs.getString("name"),
+                                    rs.getBoolean("active")
+                            );
+
+                    Long adjustmentGrams = rs.getObject(
+                            "weight_adjustment_grams",
+                            Long.class
+                    );
+
+                    if (adjustmentGrams != null) {
+                        configuration.updateWeightAdjustment(
+                                new ConfigurationWeightAdjustment(
+                                        adjustmentGrams
+                                )
+                        );
+                    }
+
+                    return configuration;
+                },
                 equipmentId
         );
     }
+
 
 
 }
