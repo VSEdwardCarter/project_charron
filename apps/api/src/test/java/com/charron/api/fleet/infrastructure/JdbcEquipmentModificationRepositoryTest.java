@@ -601,4 +601,68 @@ class JdbcEquipmentModificationRepositoryTest {
         assertEquals(1, events.size());
         assertEquals(originalEvent, events.get(0));
     }
+
+
+    @Test
+    void rejectsRemovalBeforeModificationEffectiveDate() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID modificationId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Test Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        Instant installedAt =
+                Instant.parse("2026-11-10T10:00:00Z");
+
+        Instant recordedAt =
+                Instant.parse("2026-11-14T15:30:00Z");
+
+        modificationRepository.insert(
+                new EquipmentModification(
+                        modificationId,
+                        equipmentId,
+                        null,
+                        EquipmentModificationType.INSTALLATION,
+                        "Installed hydraulic liftgate",
+                        installedAt,
+                        recordedAt
+                )
+        );
+
+        EquipmentModificationEvent invalidRemoval =
+                new EquipmentModificationEvent(
+                        UUID.randomUUID(),
+                        modificationId,
+                        EquipmentModificationEventType.REMOVED,
+                        Instant.parse("2026-11-09T10:00:00Z"),
+                        Instant.parse("2026-11-18T09:00:00Z")
+                );
+
+        jdbcTemplate.execute("SAVEPOINT before_invalid_removal");
+
+        try {
+            assertThrows(
+                    DataAccessException.class,
+                    () -> modificationRepository.insertEvent(
+                            invalidRemoval
+                    )
+            );
+        } finally {
+            jdbcTemplate.execute(
+                    "ROLLBACK TO SAVEPOINT before_invalid_removal"
+            );
+        }
+
+        // No invalid removal event should have been stored.
+        assertTrue(
+                modificationRepository.findEventsByModificationId(
+                        modificationId
+                ).isEmpty()
+        );
+    }
+
 }
