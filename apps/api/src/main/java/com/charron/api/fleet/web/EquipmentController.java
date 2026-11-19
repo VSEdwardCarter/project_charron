@@ -3,6 +3,7 @@ package com.charron.api.fleet.web;
 
 import com.charron.api.common.measurement.Dimensions;
 import com.charron.api.common.measurement.Weight;
+import com.charron.api.fleet.application.EquipmentConfigurationRepository;
 import com.charron.api.fleet.application.EquipmentRepository;
 import com.charron.api.fleet.domain.*;
 import org.springframework.http.HttpStatus;
@@ -21,11 +22,17 @@ public class EquipmentController {
 
     private final EquipmentRepository equipmentRepository;
 
+
+    private final EquipmentConfigurationRepository configurationRepository;
+
     public EquipmentController(
-            EquipmentRepository equipmentRepository
+            EquipmentRepository equipmentRepository,
+            EquipmentConfigurationRepository configurationRepository
     ) {
         this.equipmentRepository = equipmentRepository;
+        this.configurationRepository = configurationRepository;
     }
+
 
     @GetMapping
     public List<EquipmentResponse> findAll() {
@@ -289,6 +296,142 @@ public class EquipmentController {
             throw new ResponseStatusException(
                     HttpStatus.NOT_FOUND,
                     "Equipment capability not assigned"
+            );
+        }
+    }
+
+    @GetMapping("/{id}/configurations")
+    public ResponseEntity<List<EquipmentConfigurationResponse>> findConfigurations(
+            @PathVariable UUID id
+    ) {
+        if (equipmentRepository.findIdentityById(id).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        List<EquipmentConfigurationResponse> configurations =
+                configurationRepository.findByEquipmentId(id)
+                        .stream()
+                        .map(configuration -> new EquipmentConfigurationResponse(
+                                configuration.getId(),
+                                configuration.getEquipmentId(),
+                                configuration.getName(),
+                                configuration.isActive()
+                        ))
+                        .toList();
+
+        return ResponseEntity.ok(configurations);
+    }
+
+    public record EquipmentConfigurationResponse(
+            UUID id,
+            UUID equipmentId,
+            String name,
+            boolean active
+    ) {
+    }
+
+
+    @PostMapping("/{id}/configurations")
+    @ResponseStatus(HttpStatus.CREATED)
+    public EquipmentConfigurationResponse createConfiguration(
+            @PathVariable UUID id,
+            @RequestBody EquipmentConfigurationRequest request
+    ) {
+        if (equipmentRepository.findIdentityById(id).isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Equipment not found"
+            );
+        }
+
+        try {
+            EquipmentConfiguration configuration =
+                    new EquipmentConfiguration(
+                            UUID.randomUUID(),
+                            id,
+                            request.name(),
+                            request.active()
+                    );
+
+            configurationRepository.insert(configuration);
+
+            return new EquipmentConfigurationResponse(
+                    configuration.getId(),
+                    configuration.getEquipmentId(),
+                    configuration.getName(),
+                    configuration.isActive()
+            );
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    exception.getMessage(),
+                    exception
+            );
+        }
+    }
+
+    public record EquipmentConfigurationRequest(
+            String name,
+            boolean active
+    ) {
+    }
+
+    @PutMapping("/{id}/configurations/{configurationId}")
+    public EquipmentConfigurationResponse updateConfiguration(
+            @PathVariable UUID id,
+            @PathVariable UUID configurationId,
+            @RequestBody EquipmentConfigurationRequest request
+    ) {
+        if (equipmentRepository.findIdentityById(id).isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Equipment not found"
+            );
+        }
+
+        EquipmentConfiguration configuration =
+                configurationRepository.findById(configurationId)
+                        .orElseThrow(() -> new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Configuration not found"
+                        ));
+
+        if (!configuration.getEquipmentId().equals(id)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Configuration does not belong to this equipment"
+            );
+        }
+
+        try {
+            configuration.setName(request.name());
+
+            if (request.active()) {
+                configuration.activate();
+            } else {
+                configuration.deactivate();
+            }
+
+            boolean updated = configurationRepository.updateDetails(configuration);
+
+            if (!updated) {
+                throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Configuration could not be updated"
+                );
+            }
+
+            return new EquipmentConfigurationResponse(
+                    configuration.getId(),
+                    configuration.getEquipmentId(),
+                    configuration.getName(),
+                    configuration.isActive()
+            );
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    exception.getMessage(),
+                    exception
             );
         }
     }

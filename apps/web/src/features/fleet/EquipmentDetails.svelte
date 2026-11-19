@@ -4,7 +4,7 @@
         categoryLabels,
         type Equipment,
     } from '../../lib/models/equipment'
-
+    import EquipmentConfigurations from './EquipmentConfigurations.svelte'
     interface Props {
         equipment: Equipment
         onBack: () => void
@@ -148,9 +148,8 @@
                         </dd>
                     </div>
                 </dl>
-            </section>
 
-            <section>
+
                 <h5 class="mb-3 font-medium text-slate-200">
                     Weight Specifications
                 </h5>
@@ -183,7 +182,11 @@
                         </div>
                     </dl>
                 {/if}
+            </section>
+            <section>
+
                 <EquipmentCapabilities equipmentId={equipment.id} />
+                <EquipmentConfigurations equipmentId={equipment.id} />
             </section>
         </div>
     {/if}

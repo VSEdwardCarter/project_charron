@@ -254,4 +254,34 @@ public class JdbcEquipmentConfigurationRepository
         return rows == 1;
     }
 
+
+    @Override
+    public List<EquipmentConfiguration> findByEquipmentId(
+            UUID equipmentId
+    ) {
+        Objects.requireNonNull(
+                equipmentId,
+                "Equipment ID is required"
+        );
+
+        String sql = """
+            SELECT id, equipment_id, name, active
+            FROM equipment_configurations
+            WHERE equipment_id = ?
+            ORDER BY name ASC, id ASC
+            """;
+
+        return jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> new EquipmentConfiguration(
+                        rs.getObject("id", UUID.class),
+                        rs.getObject("equipment_id", UUID.class),
+                        rs.getString("name"),
+                        rs.getBoolean("active")
+                ),
+                equipmentId
+        );
+    }
+
+
 }

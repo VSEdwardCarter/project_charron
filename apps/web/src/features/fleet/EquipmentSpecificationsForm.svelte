@@ -22,28 +22,43 @@
             : String(Number((value / factor).toFixed(4)))
     }
 
-    let length = $state(toInput(specifications?.lengthMm ?? null, MM_PER_FOOT))
-    let width = $state(toInput(specifications?.widthMm ?? null, MM_PER_FOOT))
-    let height = $state(toInput(specifications?.heightMm ?? null, MM_PER_FOOT))
 
-    let hasWeightSpecifications = $state(
-        specifications?.weightSpecificationsPresent ?? false
-    )
+    let length = $state('')
+    let width = $state('')
+    let height = $state('')
 
-    let emptyWeight = $state(
-        toInput(specifications?.emptyWeightGrams ?? null, GRAMS_PER_POUND)
-    )
+    let hasWeightSpecifications = $state(false)
 
-    let grossWeightRating = $state(
-        toInput(specifications?.grossWeightRatingGrams ?? null, GRAMS_PER_POUND)
-    )
+    let emptyWeight = $state('')
+    let grossWeightRating = $state('')
+    let ratedPayloadCapacity = $state('')
 
-    let ratedPayloadCapacity = $state(
-        toInput(specifications?.ratedPayloadCapacityGrams ?? null, GRAMS_PER_POUND)
-    )
+    function initializeForm(
+        current: EquipmentSpecifications | null
+    ): void {
+        length = toInput(current?.lengthMm ?? null, MM_PER_FOOT)
+        width = toInput(current?.widthMm ?? null, MM_PER_FOOT)
+        height = toInput(current?.heightMm ?? null, MM_PER_FOOT)
 
-    let saving = $state(false)
-    let error = $state<string | null>(null)
+        hasWeightSpecifications =
+            current?.weightSpecificationsPresent ?? false
+
+        emptyWeight = toInput(
+            current?.emptyWeightGrams ?? null,
+            GRAMS_PER_POUND
+        )
+
+        grossWeightRating = toInput(
+            current?.grossWeightRatingGrams ?? null,
+            GRAMS_PER_POUND
+        )
+
+        ratedPayloadCapacity = toInput(
+            current?.ratedPayloadCapacityGrams ?? null,
+            GRAMS_PER_POUND
+        )
+    }
+
 
 
     function convert(

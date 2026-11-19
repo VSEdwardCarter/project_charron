@@ -450,4 +450,66 @@ class JdbcEquipmentConfigurationRepositoryTest {
         assertTrue(retrieved.isActive());
     }
 
+
+    @Test
+    void retrievesConfigurationsForEquipment() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID otherEquipmentId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "Configuration List Test Tractor",
+                EquipmentCategory.TRACTOR,
+                null
+        ));
+
+        equipmentRepository.insertIdentity(new Equipment(
+                otherEquipmentId,
+                "Other Test Tractor",
+                EquipmentCategory.TRACTOR,
+                null
+        ));
+
+        EquipmentConfiguration standard = new EquipmentConfiguration(
+                UUID.randomUUID(),
+                equipmentId,
+                "Standard",
+                true
+        );
+
+        EquipmentConfiguration heavyCargo = new EquipmentConfiguration(
+                UUID.randomUUID(),
+                equipmentId,
+                "Heavy Cargo",
+                false
+        );
+
+        EquipmentConfiguration unrelated = new EquipmentConfiguration(
+                UUID.randomUUID(),
+                otherEquipmentId,
+                "Unrelated",
+                true
+        );
+
+        configurationRepository.insert(standard);
+        configurationRepository.insert(heavyCargo);
+        configurationRepository.insert(unrelated);
+
+        var results = configurationRepository.findByEquipmentId(equipmentId);
+
+        assertEquals(2, results.size());
+        assertEquals("Heavy Cargo", results.get(0).getName());
+        assertEquals("Standard", results.get(1).getName());
+
+        assertEquals(
+                equipmentId,
+                results.get(0).getEquipmentId()
+        );
+
+        assertEquals(
+                equipmentId,
+                results.get(1).getEquipmentId()
+        );
+    }
+
 }

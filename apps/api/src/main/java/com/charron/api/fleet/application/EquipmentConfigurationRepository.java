@@ -4,6 +4,7 @@ package com.charron.api.fleet.application;
 import com.charron.api.fleet.domain.EquipmentCapability;
 import com.charron.api.fleet.domain.EquipmentConfiguration;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -33,5 +34,8 @@ public interface EquipmentConfigurationRepository {
     boolean updateWeightAdjustment(
             EquipmentConfiguration configuration
     );
+
+
+    List<EquipmentConfiguration> findByEquipmentId(UUID equipmentId);
 
 }
