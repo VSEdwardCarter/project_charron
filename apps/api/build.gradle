@@ -98,3 +98,12 @@ tasks.register('webBuild', Exec) {
 	commandLine "${nodeBin}/npm", 'run', 'build'
 }
 
+tasks.register('dev', Exec) {
+	group = 'charron'
+	description = 'Start the complete CHARRON development environment'
+
+	workingDir rootProject.file('../..')
+
+	commandLine 'bash', 'scripts/dev.sh'
+}
+
