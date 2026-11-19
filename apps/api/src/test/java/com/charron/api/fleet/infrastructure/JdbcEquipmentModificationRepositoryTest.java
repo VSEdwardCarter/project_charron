@@ -665,4 +665,97 @@ class JdbcEquipmentModificationRepositoryTest {
         );
     }
 
+
+    @Test
+    void validatesDeferredModificationEventSequence() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID modificationId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Test Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        Instant installedAt =
+                Instant.parse("2026-11-10T10:00:00Z");
+
+        Instant recordedAt =
+                Instant.parse("2026-11-14T15:30:00Z");
+
+        modificationRepository.insert(
+                new EquipmentModification(
+                        modificationId,
+                        equipmentId,
+                        null,
+                        EquipmentModificationType.INSTALLATION,
+                        "Installed hydraulic liftgate",
+                        installedAt,
+                        recordedAt
+                )
+        );
+
+        EquipmentModificationEvent removal =
+                new EquipmentModificationEvent(
+                        UUID.randomUUID(),
+                        modificationId,
+                        EquipmentModificationEventType.REMOVED,
+                        Instant.parse("2026-11-15T12:00:00Z"),
+                        Instant.parse("2026-11-18T09:00:00Z")
+                );
+
+        EquipmentModificationEvent recording =
+                new EquipmentModificationEvent(
+                        UUID.randomUUID(),
+                        modificationId,
+                        EquipmentModificationEventType.RECORDED,
+                        installedAt,
+                        recordedAt
+                );
+
+        // Scenario 1: Removal without recording must fail.
+        jdbcTemplate.execute("SAVEPOINT before_invalid_sequence");
+
+        try {
+            modificationRepository.insertEvent(removal);
+
+            // Force the deferred constraint to validate now,
+            // simulating the check normally performed at commit.
+            assertThrows(
+                    DataAccessException.class,
+                    () -> jdbcTemplate.execute(
+                            "SET CONSTRAINTS ALL IMMEDIATE"
+                    )
+            );
+        } finally {
+            jdbcTemplate.execute(
+                    "ROLLBACK TO SAVEPOINT before_invalid_sequence"
+            );
+        }
+
+        assertTrue(
+                modificationRepository.findEventsByModificationId(
+                        modificationId
+                ).isEmpty()
+        );
+
+        // Scenario 2: Out-of-order insertion is valid
+        // when both lifecycle events are present.
+        modificationRepository.insertEvent(removal);
+        modificationRepository.insertEvent(recording);
+
+        // Force deferred validation with both events present.
+        jdbcTemplate.execute("SET CONSTRAINTS ALL IMMEDIATE");
+
+        List<EquipmentModificationEvent> events =
+                modificationRepository.findEventsByModificationId(
+                        modificationId
+                );
+
+        assertEquals(2, events.size());
+        assertTrue(events.contains(recording));
+        assertTrue(events.contains(removal));
+    }
+
 }
