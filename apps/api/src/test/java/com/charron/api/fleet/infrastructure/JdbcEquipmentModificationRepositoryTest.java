@@ -8,6 +8,7 @@ import com.charron.api.fleet.domain.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -419,6 +420,108 @@ class JdbcEquipmentModificationRepositoryTest {
 
         assertFalse(
                 updatedKnowledge.isEffectiveAt(november16)
+        );
+    }
+
+
+    @Test
+    void preventsModificationEventUpdatesAndDeletes() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID modificationId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Test Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        Instant effectiveAt =
+                Instant.parse("2026-11-10T10:00:00Z");
+
+        Instant recordedAt =
+                Instant.parse("2026-11-14T15:30:00Z");
+
+        modificationRepository.insert(
+                new EquipmentModification(
+                        modificationId,
+                        equipmentId,
+                        null,
+                        EquipmentModificationType.INSTALLATION,
+                        "Installed hydraulic liftgate",
+                        effectiveAt,
+                        recordedAt
+                )
+        );
+
+        modificationRepository.insertEvent(
+                new EquipmentModificationEvent(
+                        eventId,
+                        modificationId,
+                        EquipmentModificationEventType.RECORDED,
+                        effectiveAt,
+                        recordedAt
+                )
+        );
+
+        // PostgreSQL rolls back to a savepoint after each
+        // rejected statement, keeping the transaction usable.
+
+        jdbcTemplate.execute("SAVEPOINT before_event_update");
+
+        try {
+            assertThrows(
+                    DataAccessException.class,
+                    () -> jdbcTemplate.update(
+                            """
+                            UPDATE equipment_modification_events
+                            SET recorded_at = ?
+                            WHERE id = ?
+                            """,
+                            java.sql.Timestamp.from(
+                                    Instant.parse("2026-11-15T10:00:00Z")
+                            ),
+                            eventId
+                    )
+            );
+        } finally {
+            jdbcTemplate.execute(
+                    "ROLLBACK TO SAVEPOINT before_event_update"
+            );
+        }
+
+        jdbcTemplate.execute("SAVEPOINT before_event_delete");
+
+        try {
+            assertThrows(
+                    DataAccessException.class,
+                    () -> jdbcTemplate.update(
+                            """
+                            DELETE FROM equipment_modification_events
+                            WHERE id = ?
+                            """,
+                            eventId
+                    )
+            );
+        } finally {
+            jdbcTemplate.execute(
+                    "ROLLBACK TO SAVEPOINT before_event_delete"
+            );
+        }
+
+        // Confirm the original event still exists.
+        assertEquals(
+                1,
+                jdbcTemplate.queryForObject(
+                        """
+                        SELECT COUNT(*)
+                        FROM equipment_modification_events
+                        WHERE id = ?
+                        """,
+                        Integer.class,
+                        eventId
+                )
         );
     }
 
