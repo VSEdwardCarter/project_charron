@@ -2,6 +2,7 @@
 package com.charron.api.fleet.web;
 
 import com.charron.api.fleet.application.EquipmentModificationRecordingService;
+import com.charron.api.fleet.application.EquipmentModificationRemovalService;
 import com.charron.api.fleet.application.EquipmentModificationRepository;
 import com.charron.api.fleet.application.EquipmentRepository;
 import com.charron.api.fleet.domain.EquipmentModification;
@@ -22,17 +23,22 @@ public class EquipmentModificationController {
     private final EquipmentRepository equipmentRepository;
     private final EquipmentModificationRecordingService recordingService;
     private final EquipmentModificationRepository modificationRepository;
+    private final EquipmentModificationRemovalService removalService;
+
 
 
     public EquipmentModificationController(
             EquipmentRepository equipmentRepository,
             EquipmentModificationRecordingService recordingService,
-            EquipmentModificationRepository modificationRepository
+            EquipmentModificationRepository modificationRepository,
+            EquipmentModificationRemovalService removalService
     ) {
         this.equipmentRepository = equipmentRepository;
         this.recordingService = recordingService;
         this.modificationRepository = modificationRepository;
+        this.removalService = removalService;
     }
+
 
 
     @PostMapping
@@ -116,5 +122,67 @@ public class EquipmentModificationController {
 
         return modificationRepository.findByEquipmentId(equipmentId);
     }
+
+    @PostMapping("/{modificationId}/remove")
+    public EquipmentModificationEvent remove(
+            @PathVariable UUID equipmentId,
+            @PathVariable UUID modificationId,
+            @RequestBody RemoveModificationRequest request
+    ) {
+        if (equipmentRepository.findIdentityById(equipmentId).isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Equipment not found"
+            );
+        }
+
+        EquipmentModification modification = modificationRepository
+                .findById(modificationId)
+                .filter(item -> equipmentId.equals(item.equipmentId()))
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Modification not found for this equipment"
+                ));
+
+        if (request == null || request.effectiveAt() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Removal effectiveAt is required"
+            );
+        }
+
+        if (modification.removedAt() != null) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Modification is already removed"
+            );
+        }
+
+        if (request.effectiveAt().isBefore(modification.effectiveAt())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Removal cannot precede modification effective date"
+            );
+        }
+
+        try {
+            return removalService.remove(
+                    modificationId,
+                    request.effectiveAt()
+            );
+        } catch (IllegalStateException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    exception.getMessage(),
+                    exception
+            );
+        }
+    }
+
+    public record RemoveModificationRequest(
+            Instant effectiveAt
+    ) {
+    }
+
 
 }

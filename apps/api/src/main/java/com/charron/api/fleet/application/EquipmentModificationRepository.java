@@ -4,6 +4,7 @@ package com.charron.api.fleet.application;
 import com.charron.api.fleet.domain.EquipmentModification;
 import com.charron.api.fleet.domain.EquipmentModificationEvent;
 
+import java.time.Instant;
 import java.util.UUID;
 import java.util.Optional;
 import java.util.List;
@@ -21,5 +22,11 @@ public interface EquipmentModificationRepository {
     );
 
     List<EquipmentModification> findByEquipmentId(UUID equipmentId);
+
+    boolean markRemoved(
+            UUID modificationId,
+            Instant removedAt
+    );
+
 
 }

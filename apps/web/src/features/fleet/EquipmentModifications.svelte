@@ -5,7 +5,7 @@
         getEquipmentModifications,
         recordEquipmentModification,
         type EquipmentModification,
-        type EquipmentModificationType,
+        type EquipmentModificationType, removeEquipmentModification,
     } from '../../lib/api/equipmentModifications'
 
     interface Props {
@@ -32,6 +32,52 @@
     let type = $state<EquipmentModificationType>('INSTALLATION')
     let description = $state('')
     let effectiveAt = $state('')
+
+    let removingId = $state<string | null>(null)
+    let removalDate = $state('')
+    let removalError = $state<string | null>(null)
+    let removalSaving = $state(false)
+
+    function cancelRemoval(): void {
+        removingId = null
+        removalDate = ''
+        removalError = null
+    }
+
+    async function handleRemoval(
+        modification: EquipmentModification
+    ): Promise<void> {
+        if (!removalDate || removalSaving) return
+
+        const effectiveAt = new Date(removalDate).toISOString()
+
+        if (new Date(effectiveAt) < new Date(modification.effectiveAt)) {
+            removalError =
+                'Removal cannot precede the modification effective date.'
+            return
+        }
+
+        removalSaving = true
+        removalError = null
+
+        try {
+            await removeEquipmentModification(
+                equipmentId,
+                modification.id,
+                effectiveAt
+            )
+
+            cancelRemoval()
+            await loadModifications()
+        } catch (err) {
+            removalError = err instanceof Error
+                ? err.message
+                : 'Unable to remove modification'
+        } finally {
+            removalSaving = false
+        }
+    }
+
 
     onMount(() => {
         void loadModifications()
@@ -223,11 +269,72 @@
                         Recorded: {formatDate(modification.recordedAt)}
                     </p>
 
+
                     {#if modification.removedAt}
-                        <p class="mt-1 text-xs text-amber-400">
+                        <p class="mt-3 text-xs text-amber-400">
                             Removed: {formatDate(modification.removedAt)}
                         </p>
+                    {:else if removingId === modification.id}
+                        <div class="mt-4 space-y-3 border-t border-slate-800 pt-4">
+                            <label
+                                    for="removal-effective-at"
+                                    class="block text-sm text-slate-300"
+                            >
+                                When was this modification removed?
+                            </label>
+
+                            <input
+                                    id="removal-effective-at"
+                                    type="datetime-local"
+                                    bind:value={removalDate}
+                                    class="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-white"
+                            />
+
+                            <p class="text-xs text-slate-400">
+                                The original modification will remain in history.
+                                CHARRON will record the removal timestamp separately.
+                            </p>
+
+                            {#if removalError}
+                                <p class="text-sm text-red-400" role="alert">
+                                    {removalError}
+                                </p>
+                            {/if}
+
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                        type="button"
+                                        onclick={() => handleRemoval(modification)}
+                                        disabled={!removalDate || removalSaving}
+                                        class="rounded-full bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+                                >
+                                    {removalSaving ? 'Saving...' : 'Confirm Removal'}
+                                </button>
+
+                                <button
+                                        type="button"
+                                        onclick={cancelRemoval}
+                                        disabled={removalSaving}
+                                        class="rounded-full border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    {:else}
+                        <button
+                                type="button"
+                                onclick={() => {
+                                    removingId = modification.id
+                                    removalDate = ''
+                                    removalError = null
+                                }}
+                                class="mt-4 rounded-full border border-amber-700 px-4 py-2 text-sm text-amber-400 hover:bg-slate-800"
+                        >
+                            Mark as Removed
+                        </button>
                     {/if}
+
                 </article>
             {/each}
         </div>

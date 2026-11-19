@@ -9,6 +9,7 @@ import com.charron.api.fleet.domain.EquipmentModificationType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -227,6 +228,39 @@ public class JdbcEquipmentModificationRepository
                 ),
                 equipmentId
         );
+    }
+
+    @Override
+    public boolean markRemoved(
+            UUID modificationId,
+            Instant removedAt
+    ) {
+        Objects.requireNonNull(
+                modificationId,
+                "Modification ID is required"
+        );
+
+        Objects.requireNonNull(
+                removedAt,
+                "Removal timestamp is required"
+        );
+
+        String sql = """
+            UPDATE equipment_modifications
+            SET removed_at = ?
+            WHERE id = ?
+              AND removed_at IS NULL
+              AND effective_at <= ?
+            """;
+
+        int rows = jdbcTemplate.update(
+                sql,
+                java.sql.Timestamp.from(removedAt),
+                modificationId,
+                java.sql.Timestamp.from(removedAt)
+        );
+
+        return rows == 1;
     }
 
 

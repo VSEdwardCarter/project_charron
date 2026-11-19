@@ -59,3 +59,26 @@ export async function recordEquipmentModification(
         )
     }
 }
+
+export async function removeEquipmentModification(
+    equipmentId: string,
+    modificationId: string,
+    effectiveAt: string
+): Promise<void> {
+    const response = await fetch(
+        `/api/equipment/${encodeURIComponent(equipmentId)}/modifications/${encodeURIComponent(modificationId)}/remove`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ effectiveAt }),
+        }
+    )
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to remove modification (${response.status})`
+        )
+    }
+}
