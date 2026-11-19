@@ -1,10 +1,15 @@
 
 package com.charron.api.fleet.web;
 
+import com.charron.api.common.measurement.Dimensions;
+import com.charron.api.common.measurement.Weight;
 import com.charron.api.fleet.application.EquipmentRepository;
 import com.charron.api.fleet.domain.Equipment;
 import com.charron.api.fleet.domain.EquipmentCategory;
+import com.charron.api.fleet.domain.EquipmentSpecifications;
+import com.charron.api.fleet.domain.WeightSpecifications;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -70,4 +75,54 @@ public class EquipmentController {
             String vin
     ) {
     }
+
+    @GetMapping("/{id}/specifications")
+    public ResponseEntity<EquipmentSpecificationsResponse> findSpecifications(
+            @PathVariable UUID id
+    ) {
+        if (equipmentRepository.findIdentityById(id).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return equipmentRepository
+                .findSpecificationsByEquipmentId(id)
+                .map(specifications -> ResponseEntity.ok(
+                        toSpecificationsResponse(specifications)
+                ))
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
+
+    private static EquipmentSpecificationsResponse toSpecificationsResponse(
+            EquipmentSpecifications specifications
+    ) {
+        Dimensions dimensions = specifications.exteriorDimensions();
+        WeightSpecifications weights = specifications.weightSpecifications();
+
+        return new EquipmentSpecificationsResponse(
+                dimensions == null ? null : dimensions.lengthMm(),
+                dimensions == null ? null : dimensions.widthMm(),
+                dimensions == null ? null : dimensions.heightMm(),
+                weights != null,
+                weights == null ? null : gramsOrNull(weights.emptyWeight()),
+                weights == null ? null : gramsOrNull(weights.grossWeightRating()),
+                weights == null ? null : gramsOrNull(weights.ratedPayloadCapacity())
+        );
+    }
+
+    private static Long gramsOrNull(Weight weight) {
+        return weight == null ? null : weight.grams();
+    }
+
+    public record EquipmentSpecificationsResponse(
+            Long lengthMm,
+            Long widthMm,
+            Long heightMm,
+            boolean weightSpecificationsPresent,
+            Long emptyWeightGrams,
+            Long grossWeightRatingGrams,
+            Long ratedPayloadCapacityGrams
+    ) {
+    }
+
 }
+
