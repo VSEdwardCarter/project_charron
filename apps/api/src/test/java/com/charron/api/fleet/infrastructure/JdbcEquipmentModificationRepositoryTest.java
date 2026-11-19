@@ -526,4 +526,79 @@ class JdbcEquipmentModificationRepositoryTest {
     }
 
 
+    @Test
+    void rejectsDuplicateModificationEventTypes() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID modificationId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Test Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        Instant effectiveAt =
+                Instant.parse("2026-11-10T10:00:00Z");
+
+        Instant recordedAt =
+                Instant.parse("2026-11-14T15:30:00Z");
+
+        modificationRepository.insert(
+                new EquipmentModification(
+                        modificationId,
+                        equipmentId,
+                        null,
+                        EquipmentModificationType.INSTALLATION,
+                        "Installed hydraulic liftgate",
+                        effectiveAt,
+                        recordedAt
+                )
+        );
+
+        EquipmentModificationEvent originalEvent =
+                new EquipmentModificationEvent(
+                        UUID.randomUUID(),
+                        modificationId,
+                        EquipmentModificationEventType.RECORDED,
+                        effectiveAt,
+                        recordedAt
+                );
+
+        modificationRepository.insertEvent(originalEvent);
+
+        // Isolate the expected PostgreSQL constraint violation.
+        jdbcTemplate.execute("SAVEPOINT before_duplicate_event");
+
+        try {
+            EquipmentModificationEvent duplicateEvent =
+                    new EquipmentModificationEvent(
+                            UUID.randomUUID(),
+                            modificationId,
+                            EquipmentModificationEventType.RECORDED,
+                            effectiveAt,
+                            recordedAt.plusSeconds(60)
+                    );
+
+            assertThrows(
+                    DataAccessException.class,
+                    () -> modificationRepository.insertEvent(
+                            duplicateEvent
+                    )
+            );
+        } finally {
+            jdbcTemplate.execute(
+                    "ROLLBACK TO SAVEPOINT before_duplicate_event"
+            );
+        }
+
+        // Verify that only the original event remains.
+        List<EquipmentModificationEvent> events =
+                modificationRepository.findEventsByModificationId(
+                        modificationId
+                );
+
+        assertEquals(1, events.size());
+        assertEquals(originalEvent, events.get(0));
+    }
 }
