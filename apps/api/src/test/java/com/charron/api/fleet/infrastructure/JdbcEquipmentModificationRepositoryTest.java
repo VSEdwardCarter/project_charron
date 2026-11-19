@@ -758,4 +758,191 @@ class JdbcEquipmentModificationRepositoryTest {
         assertTrue(events.contains(removal));
     }
 
+
+    @Test
+    void rejectsRecordedEventWithMismatchedTimestamps() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID modificationId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Test Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        Instant effectiveAt =
+                Instant.parse("2026-11-10T10:00:00Z");
+
+        Instant recordedAt =
+                Instant.parse("2026-11-14T15:30:00Z");
+
+        modificationRepository.insert(
+                new EquipmentModification(
+                        modificationId,
+                        equipmentId,
+                        null,
+                        EquipmentModificationType.INSTALLATION,
+                        "Installed hydraulic liftgate",
+                        effectiveAt,
+                        recordedAt
+                )
+        );
+
+        EquipmentModificationEvent invalidEvent =
+                new EquipmentModificationEvent(
+                        UUID.randomUUID(),
+                        modificationId,
+                        EquipmentModificationEventType.RECORDED,
+                        effectiveAt.plusSeconds(3600),
+                        recordedAt
+                );
+
+        jdbcTemplate.execute("SAVEPOINT before_invalid_recording");
+
+        try {
+            assertThrows(
+                    DataAccessException.class,
+                    () -> modificationRepository.insertEvent(
+                            invalidEvent
+                    )
+            );
+        } finally {
+            jdbcTemplate.execute(
+                    "ROLLBACK TO SAVEPOINT before_invalid_recording"
+            );
+        }
+
+        assertTrue(
+                modificationRepository.findEventsByModificationId(
+                        modificationId
+                ).isEmpty()
+        );
+    }
+
+
+    @Test
+    void allowsRemovalEventWithIndependentTimestamps() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID modificationId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Test Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        Instant installedAt =
+                Instant.parse("2026-11-10T10:00:00Z");
+
+        Instant recordedAt =
+                Instant.parse("2026-11-14T15:30:00Z");
+
+        modificationRepository.insert(
+                new EquipmentModification(
+                        modificationId,
+                        equipmentId,
+                        null,
+                        EquipmentModificationType.INSTALLATION,
+                        "Installed hydraulic liftgate",
+                        installedAt,
+                        recordedAt
+                )
+        );
+
+        EquipmentModificationEvent recordedEvent =
+                new EquipmentModificationEvent(
+                        UUID.randomUUID(),
+                        modificationId,
+                        EquipmentModificationEventType.RECORDED,
+                        installedAt,
+                        recordedAt
+                );
+
+        EquipmentModificationEvent removalEvent =
+                new EquipmentModificationEvent(
+                        UUID.randomUUID(),
+                        modificationId,
+                        EquipmentModificationEventType.REMOVED,
+                        Instant.parse("2026-11-15T12:00:00Z"),
+                        Instant.parse("2026-11-18T09:00:00Z")
+                );
+
+        modificationRepository.insertEvent(recordedEvent);
+        modificationRepository.insertEvent(removalEvent);
+
+        List<EquipmentModificationEvent> events =
+                modificationRepository.findEventsByModificationId(
+                        modificationId
+                );
+
+        assertEquals(2, events.size());
+        assertTrue(events.contains(recordedEvent));
+        assertTrue(events.contains(removalEvent));
+    }
+
+
+    @Test
+    void preventsModificationOriginalTimestampChanges() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID modificationId = UUID.randomUUID();
+
+        equipmentRepository.insertIdentity(new Equipment(
+                equipmentId,
+                "CHARRON Test Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        Instant effectiveAt =
+                Instant.parse("2026-11-10T10:00:00Z");
+
+        Instant recordedAt =
+                Instant.parse("2026-11-14T15:30:00Z");
+
+        modificationRepository.insert(
+                new EquipmentModification(
+                        modificationId,
+                        equipmentId,
+                        null,
+                        EquipmentModificationType.INSTALLATION,
+                        "Installed hydraulic liftgate",
+                        effectiveAt,
+                        recordedAt
+                )
+        );
+
+        jdbcTemplate.execute("SAVEPOINT before_timestamp_update");
+
+        try {
+            assertThrows(
+                    DataAccessException.class,
+                    () -> jdbcTemplate.update(
+                            """
+                            UPDATE equipment_modifications
+                            SET effective_at = ?
+                            WHERE id = ?
+                            """,
+                            java.sql.Timestamp.from(
+                                    effectiveAt.plusSeconds(3600)
+                            ),
+                            modificationId
+                    )
+            );
+        } finally {
+            jdbcTemplate.execute(
+                    "ROLLBACK TO SAVEPOINT before_timestamp_update"
+            );
+        }
+
+        EquipmentModification retrieved =
+                modificationRepository.findById(modificationId)
+                        .orElseThrow();
+
+        assertEquals(effectiveAt, retrieved.effectiveAt());
+        assertEquals(recordedAt, retrieved.recordedAt());
+    }
+
+
 }
