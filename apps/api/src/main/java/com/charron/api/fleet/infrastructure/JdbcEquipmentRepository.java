@@ -312,4 +312,64 @@ public class JdbcEquipmentRepository implements EquipmentRepository {
     }
 
 
+    @Override
+    public void saveSpecifications(
+            UUID equipmentId,
+            EquipmentSpecifications specifications
+    ) {
+        Objects.requireNonNull(
+                equipmentId, "Equipment ID is required"
+        );
+        Objects.requireNonNull(
+                specifications, "Equipment specifications are required"
+        );
+
+        Dimensions dimensions = specifications.exteriorDimensions();
+        WeightSpecifications weights = specifications.weightSpecifications();
+
+        String sql = """
+            INSERT INTO equipment_specifications (
+                equipment_id,
+                length_mm,
+                width_mm,
+                height_mm,
+                weight_specifications_present,
+                empty_weight_grams,
+                gross_weight_rating_grams,
+                rated_payload_capacity_grams
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (equipment_id)
+            DO UPDATE SET
+                length_mm = EXCLUDED.length_mm,
+                width_mm = EXCLUDED.width_mm,
+                height_mm = EXCLUDED.height_mm,
+                weight_specifications_present =
+                    EXCLUDED.weight_specifications_present,
+                empty_weight_grams =
+                    EXCLUDED.empty_weight_grams,
+                gross_weight_rating_grams =
+                    EXCLUDED.gross_weight_rating_grams,
+                rated_payload_capacity_grams =
+                    EXCLUDED.rated_payload_capacity_grams
+            """;
+
+        int rows = jdbcTemplate.update(
+                sql,
+                equipmentId,
+                dimensions == null ? null : dimensions.lengthMm(),
+                dimensions == null ? null : dimensions.widthMm(),
+                dimensions == null ? null : dimensions.heightMm(),
+                weights != null,
+                weights == null ? null : gramsOrNull(weights.emptyWeight()),
+                weights == null ? null : gramsOrNull(weights.grossWeightRating()),
+                weights == null ? null : gramsOrNull(weights.ratedPayloadCapacity())
+        );
+
+        if (rows != 1) {
+            throw new IllegalStateException(
+                    "Expected exactly one equipment specifications row"
+            );
+        }
+    }
 }

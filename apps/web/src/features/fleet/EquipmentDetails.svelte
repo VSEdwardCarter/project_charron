@@ -10,15 +10,35 @@
         onBack: () => void
     }
     import { onMount } from 'svelte'
+
     import {
         getEquipmentSpecifications,
+        saveEquipmentSpecifications,
         type EquipmentSpecifications,
+        type EquipmentSpecificationsInput,
     } from '../../lib/api/equipmentSpecifications'
+
+    import EquipmentSpecificationsForm from './EquipmentSpecificationsForm.svelte'
 
     let specifications: EquipmentSpecifications | null = $state(null)
     let specificationsLoading = $state(true)
     let specificationsError: string | null = $state(null)
     let { equipment, onBack }: Props = $props()
+
+    let editingSpecifications = $state(false)
+
+    async function handleSaveSpecifications(
+        data: EquipmentSpecificationsInput
+    ): Promise<void> {
+        const saved = await saveEquipmentSpecifications(equipment.id, data)
+        console.log('Equipment ID:', equipment.id)
+        console.log('Loaded specifications:', specifications)
+
+        specifications = saved
+        specificationsError = null
+        editingSpecifications = false
+    }
+
 
     onMount(() => {
         void loadSpecifications()
@@ -52,146 +72,118 @@
     }
 </script>
 
-<div class="rounded-xl border border-slate-800 bg-slate-900 p-6">
-    <button
-            type="button"
-            onclick={onBack}
-            class="mb-6 text-sm text-slate-400 hover:text-white"
-    >
-        ← Back to Fleet
-    </button>
 
-    <div class="mb-6">
-        <h3 class="text-xl font-semibold text-white">
-            {equipment.name}
-        </h3>
-
-        <p class="mt-1 text-sm text-slate-400">
-            Equipment Details
-        </p>
-    </div>
-
-    <dl class="grid gap-6 sm:grid-cols-2">
-        <div>
-            <dt class="text-sm text-slate-400">Name</dt>
-            <dd class="mt-1 text-white">{equipment.name}</dd>
-        </div>
-
-        <div>
-            <dt class="text-sm text-slate-400">Category</dt>
-            <dd class="mt-1 text-white">
-                {categoryLabels[equipment.category]}
-            </dd>
-        </div>
-
-        <div>
-            <dt class="text-sm text-slate-400">VIN</dt>
-            <dd class="mt-1 text-white">
-                {equipment.vin ?? 'Not provided'}
-            </dd>
-        </div>
-
-        <div>
-            <dt class="text-sm text-slate-400">Equipment ID</dt>
-            <dd class="mt-1 break-all font-mono text-sm text-white">
-                {equipment.id}
-            </dd>
-        </div>
-    </dl>
-
-    <div class="mt-8 border-t border-slate-800 pt-6">
-        <h4 class="mb-4 text-lg font-semibold text-white">
+<div class="mt-8 border-t border-slate-800 pt-6">
+    <div class="mb-5 flex items-center justify-between gap-4">
+        <h4 class="text-lg font-semibold text-white">
             Equipment Specifications
         </h4>
 
-        {#if specificationsLoading}
-            <p class="text-sm text-slate-400">
-                Loading specifications...
-            </p>
-        {:else if specificationsError}
-            <div class="flex items-center gap-4">
-                <p class="text-sm text-red-400">
-                    {specificationsError}
-                </p>
+        {#if !editingSpecifications && !specificationsLoading && !specificationsError}
+            <button
+                    type="button"
+                    onclick={() => editingSpecifications = true}
+                    class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+            >
+                {specifications ? 'Edit Specifications' : '+ Add Specifications'}
+            </button>
+        {/if}
+    </div>
 
-                <button
-                        type="button"
-                        onclick={loadSpecifications}
-                        class="text-sm text-emerald-400 hover:underline"
-                >
-                    Retry
-                </button>
-            </div>
-        {:else if specifications === null}
-            <p class="text-sm text-slate-400">
-                No specifications recorded for this equipment.
+    {#if editingSpecifications}
+        <EquipmentSpecificationsForm
+                {specifications}
+                onCancel={() => editingSpecifications = false}
+                onSave={handleSaveSpecifications}
+        />
+    {:else if specificationsLoading}
+        <p class="text-sm text-slate-400">
+            Loading specifications...
+        </p>
+    {:else if specificationsError}
+        <div class="flex items-center gap-4">
+            <p class="text-sm text-red-400">
+                {specificationsError}
             </p>
-        {:else}
-            <div class="grid gap-8 md:grid-cols-2">
-                <section>
-                    <h5 class="mb-3 font-medium text-slate-200">
-                        Exterior Dimensions
-                    </h5>
 
+            <button
+                    type="button"
+                    onclick={loadSpecifications}
+                    class="text-sm text-emerald-400 hover:underline"
+            >
+                Retry
+            </button>
+        </div>
+    {:else if specifications === null}
+        <p class="text-sm text-slate-400">
+            No specifications recorded for this equipment.
+        </p>
+    {:else}
+        <div class="grid gap-8 md:grid-cols-2">
+            <section>
+                <h5 class="mb-3 font-medium text-slate-200">
+                    Exterior Dimensions
+                </h5>
+
+                <dl class="space-y-3 text-sm">
+                    <div>
+                        <dt class="text-slate-400">Length</dt>
+                        <dd class="text-white">
+                            {formatMillimeters(specifications.lengthMm)}
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-slate-400">Width</dt>
+                        <dd class="text-white">
+                            {formatMillimeters(specifications.widthMm)}
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-slate-400">Height</dt>
+                        <dd class="text-white">
+                            {formatMillimeters(specifications.heightMm)}
+                        </dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section>
+                <h5 class="mb-3 font-medium text-slate-200">
+                    Weight Specifications
+                </h5>
+
+                {#if !specifications.weightSpecificationsPresent}
+                    <p class="text-sm text-slate-400">
+                        Weight specifications not recorded.
+                    </p>
+                {:else}
                     <dl class="space-y-3 text-sm">
                         <div>
-                            <dt class="text-slate-400">Length</dt>
+                            <dt class="text-slate-400">Empty Weight</dt>
                             <dd class="text-white">
-                                {formatMillimeters(specifications.lengthMm)}
+                                {formatGrams(specifications.emptyWeightGrams)}
                             </dd>
                         </div>
 
                         <div>
-                            <dt class="text-slate-400">Width</dt>
+                            <dt class="text-slate-400">Gross Weight Rating</dt>
                             <dd class="text-white">
-                                {formatMillimeters(specifications.widthMm)}
+                                {formatGrams(specifications.grossWeightRatingGrams)}
                             </dd>
                         </div>
 
                         <div>
-                            <dt class="text-slate-400">Height</dt>
+                            <dt class="text-slate-400">Rated Payload Capacity</dt>
                             <dd class="text-white">
-                                {formatMillimeters(specifications.heightMm)}
+                                {formatGrams(specifications.ratedPayloadCapacityGrams)}
                             </dd>
                         </div>
                     </dl>
-                </section>
-
-                <section>
-                    <h5 class="mb-3 font-medium text-slate-200">
-                        Weight Specifications
-                    </h5>
-
-                    {#if !specifications.weightSpecificationsPresent}
-                        <p class="text-sm text-slate-400">
-                            Weight specifications not recorded.
-                        </p>
-                    {:else}
-                        <dl class="space-y-3 text-sm">
-                            <div>
-                                <dt class="text-slate-400">Empty Weight</dt>
-                                <dd class="text-white">
-                                    {formatGrams(specifications.emptyWeightGrams)}
-                                </dd>
-                            </div>
-
-                            <div>
-                                <dt class="text-slate-400">Gross Weight Rating</dt>
-                                <dd class="text-white">
-                                    {formatGrams(specifications.grossWeightRatingGrams)}
-                                </dd>
-                            </div>
-
-                            <div>
-                                <dt class="text-slate-400">Rated Payload Capacity</dt>
-                                <dd class="text-white">
-                                    {formatGrams(specifications.ratedPayloadCapacityGrams)}
-                                </dd>
-                            </div>
-                        </dl>
-                    {/if}
-                </section>
-            </div>
-        {/if}
-    </div>
+                {/if}
+            </section>
+        </div>
+    {/if}
 </div>
+

@@ -454,5 +454,54 @@ class JdbcEquipmentRepositoryTest {
         assertEquals(EquipmentCategory.TRAILER, second.getCategory());
     }
 
+    @Test
+    void savesAndReplacesEquipmentSpecifications() {
+        UUID id = UUID.randomUUID();
+
+        repository.insertIdentity(new Equipment(
+                id,
+                "CHARRON Specifications Test Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        EquipmentSpecifications initial =
+                new EquipmentSpecifications(
+                        new Dimensions(12000, 2500, 4000),
+                        new WeightSpecifications(
+                                new Weight(5000000),
+                                new Weight(15000000),
+                                new Weight(10000000)
+                        )
+                );
+
+        repository.saveSpecifications(id, initial);
+
+        assertEquals(
+                initial,
+                repository.findSpecificationsByEquipmentId(id)
+                        .orElseThrow()
+        );
+
+        EquipmentSpecifications replacement =
+                new EquipmentSpecifications(
+                        new Dimensions(13000, 2600, 4200),
+                        new WeightSpecifications(
+                                new Weight(6000000),
+                                new Weight(16000000),
+                                new Weight(9000000)
+                        )
+                );
+
+        repository.saveSpecifications(id, replacement);
+
+        assertEquals(
+                replacement,
+                repository.findSpecificationsByEquipmentId(id)
+                        .orElseThrow()
+        );
+    }
+
+
 
 }

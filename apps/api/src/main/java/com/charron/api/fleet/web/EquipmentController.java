@@ -11,6 +11,7 @@ import com.charron.api.fleet.domain.WeightSpecifications;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
@@ -123,6 +124,96 @@ public class EquipmentController {
             Long ratedPayloadCapacityGrams
     ) {
     }
+
+
+    @PutMapping("/{id}/specifications")
+    public EquipmentSpecificationsResponse saveSpecifications(
+            @PathVariable UUID id,
+            @RequestBody EquipmentSpecificationsRequest request
+    ) {
+        if (equipmentRepository.findIdentityById(id).isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Equipment not found"
+            );
+        }
+
+        try {
+            boolean hasDimensions =
+                    request.lengthMm() != null
+                            || request.widthMm() != null
+                            || request.heightMm() != null;
+
+            Dimensions dimensions = hasDimensions
+                    ? new Dimensions(
+                    requireValue(request.lengthMm(), "Length"),
+                    requireValue(request.widthMm(), "Width"),
+                    requireValue(request.heightMm(), "Height")
+            )
+                    : null;
+
+            boolean hasWeightValues =
+                    request.emptyWeightGrams() != null
+                            || request.grossWeightRatingGrams() != null
+                            || request.ratedPayloadCapacityGrams() != null;
+
+            if (!request.weightSpecificationsPresent()
+                    && hasWeightValues) {
+                throw new IllegalArgumentException(
+                        "Weight values require weight specifications"
+                );
+            }
+
+            WeightSpecifications weights =
+                    request.weightSpecificationsPresent()
+                            ? new WeightSpecifications(
+                            toWeight(request.emptyWeightGrams()),
+                            toWeight(request.grossWeightRatingGrams()),
+                            toWeight(request.ratedPayloadCapacityGrams())
+                    )
+                            : null;
+
+            EquipmentSpecifications specifications =
+                    new EquipmentSpecifications(dimensions, weights);
+
+            equipmentRepository.saveSpecifications(id, specifications);
+
+            return toSpecificationsResponse(specifications);
+
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    exception.getMessage(),
+                    exception
+            );
+        }
+    }
+
+    private static long requireValue(Long value, String name) {
+        if (value == null) {
+            throw new IllegalArgumentException(
+                    name + " is required when dimensions are provided"
+            );
+        }
+
+        return value;
+    }
+
+    private static Weight toWeight(Long grams) {
+        return grams == null ? null : new Weight(grams);
+    }
+
+    public record EquipmentSpecificationsRequest(
+            Long lengthMm,
+            Long widthMm,
+            Long heightMm,
+            boolean weightSpecificationsPresent,
+            Long emptyWeightGrams,
+            Long grossWeightRatingGrams,
+            Long ratedPayloadCapacityGrams
+    ) {
+    }
+
 
 }
 

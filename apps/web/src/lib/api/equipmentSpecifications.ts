@@ -28,3 +28,30 @@ export async function getEquipmentSpecifications(
 
     return (await response.json()) as EquipmentSpecifications
 }
+
+
+export type EquipmentSpecificationsInput = EquipmentSpecifications
+
+export async function saveEquipmentSpecifications(
+    equipmentId: string,
+    specifications: EquipmentSpecificationsInput
+): Promise<EquipmentSpecifications> {
+    const response = await fetch(
+        `/api/equipment/${encodeURIComponent(equipmentId)}/specifications`,
+        {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(specifications),
+        }
+    )
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to save equipment specifications (${response.status})`
+        )
+    }
+
+    return (await response.json()) as EquipmentSpecifications
+}

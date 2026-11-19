@@ -35,6 +35,10 @@ public interface EquipmentRepository {
             UUID equipmentId
     );
 
+    void saveSpecifications(
+            UUID equipmentId,
+            EquipmentSpecifications specifications
+    );
 
     Set<EquipmentCapability> findCapabilitiesByEquipmentId(
             UUID equipmentId
