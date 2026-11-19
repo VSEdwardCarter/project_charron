@@ -19,6 +19,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -404,6 +405,54 @@ class JdbcEquipmentRepositoryTest {
         assertFalse(removedAgain);
     }
 
+
+    @Test
+    void retrievesEquipmentIdentitiesForFleetList() {
+        UUID firstId = UUID.randomUUID();
+        UUID secondId = UUID.randomUUID();
+
+        repository.insertIdentity(new Equipment(
+                firstId,
+                "CHARRON Alpha Tractor",
+                EquipmentCategory.TRACTOR,
+                null
+        ));
+
+        repository.insertIdentity(new Equipment(
+                secondId,
+                "CHARRON Bravo Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        ));
+
+        List<Equipment> equipment =
+                repository.findAllIdentities();
+
+        int firstIndex = -1;
+        int secondIndex = -1;
+
+        for (int index = 0; index < equipment.size(); index++) {
+            if (equipment.get(index).getId().equals(firstId)) {
+                firstIndex = index;
+            }
+
+            if (equipment.get(index).getId().equals(secondId)) {
+                secondIndex = index;
+            }
+        }
+
+        assertTrue(firstIndex >= 0);
+        assertTrue(secondIndex > firstIndex);
+
+        Equipment first = equipment.get(firstIndex);
+        Equipment second = equipment.get(secondIndex);
+
+        assertEquals("CHARRON Alpha Tractor", first.getName());
+        assertEquals(EquipmentCategory.TRACTOR, first.getCategory());
+
+        assertEquals("CHARRON Bravo Trailer", second.getName());
+        assertEquals(EquipmentCategory.TRAILER, second.getCategory());
+    }
 
 
 }

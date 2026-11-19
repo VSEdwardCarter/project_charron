@@ -289,4 +289,27 @@ public class JdbcEquipmentRepository implements EquipmentRepository {
         return rows == 1;
     }
 
+
+    @Override
+    public List<Equipment> findAllIdentities() {
+        String sql = """
+            SELECT id, name, category, vin
+            FROM equipment
+            ORDER BY name ASC, id ASC
+            """;
+
+        return jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> new Equipment(
+                        rs.getObject("id", UUID.class),
+                        rs.getString("name"),
+                        EquipmentCategory.valueOf(
+                                rs.getString("category")
+                        ),
+                        rs.getString("vin")
+                )
+        );
+    }
+
+
 }

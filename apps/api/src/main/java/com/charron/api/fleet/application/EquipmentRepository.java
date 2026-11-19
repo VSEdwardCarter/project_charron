@@ -5,11 +5,15 @@ import com.charron.api.fleet.domain.Equipment;
 import com.charron.api.fleet.domain.EquipmentSpecifications;
 import com.charron.api.fleet.domain.EquipmentCapability;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 public interface EquipmentRepository {
+
+
+    List<Equipment> findAllIdentities();
 
 
     void insertCapability(
