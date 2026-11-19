@@ -2,6 +2,7 @@
 <script lang="ts">
   import Header from './lib/components/layout/Header.svelte'
   import Sidebar from './lib/components/layout/Sidebar.svelte'
+  import FleetPage from "./features/fleet/FleetPage.svelte"
 
   import {
     titles,
@@ -54,12 +55,7 @@
               Your logistics operations workspace is ready.
             </p>
           {:else if activeSection === 'fleet'}
-            <h3 class="text-lg font-medium">
-              Fleet Management
-            </h3>
-            <p class="mt-2 text-sm text-slate-400">
-              Equipment management will be implemented here.
-            </p>
+            <FleetPage />
           {:else if activeSection === 'cargo'}
             <h3 class="text-lg font-medium">
               Cargo Management
