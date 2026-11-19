@@ -185,4 +185,49 @@ public class JdbcEquipmentModificationRepository
         );
     }
 
+    @Override
+    public List<EquipmentModification> findByEquipmentId(
+            UUID equipmentId
+    ) {
+        Objects.requireNonNull(
+                equipmentId,
+                "Equipment ID is required"
+        );
+
+        String sql = """
+            SELECT
+                id,
+                equipment_id,
+                configuration_id,
+                type,
+                description,
+                effective_at,
+                recorded_at,
+                removed_at
+            FROM equipment_modifications
+            WHERE equipment_id = ?
+            ORDER BY effective_at DESC, recorded_at DESC, id DESC
+            """;
+
+        return jdbcTemplate.query(
+                sql,
+                (rs, rowNum) -> new EquipmentModification(
+                        rs.getObject("id", UUID.class),
+                        rs.getObject("equipment_id", UUID.class),
+                        rs.getObject("configuration_id", UUID.class),
+                        EquipmentModificationType.valueOf(
+                                rs.getString("type")
+                        ),
+                        rs.getString("description"),
+                        rs.getTimestamp("effective_at").toInstant(),
+                        rs.getTimestamp("recorded_at").toInstant(),
+                        rs.getTimestamp("removed_at") == null
+                                ? null
+                                : rs.getTimestamp("removed_at").toInstant()
+                ),
+                equipmentId
+        );
+    }
+
+
 }

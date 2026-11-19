@@ -20,4 +20,6 @@ public interface EquipmentModificationRepository {
             UUID modificationId
     );
 
+    List<EquipmentModification> findByEquipmentId(UUID equipmentId);
+
 }

@@ -4,6 +4,7 @@ package com.charron.api.fleet.web;
 import com.charron.api.common.measurement.Dimensions;
 import com.charron.api.common.measurement.Weight;
 import com.charron.api.fleet.application.EquipmentConfigurationRepository;
+import com.charron.api.fleet.application.EquipmentRegistrationService;
 import com.charron.api.fleet.application.EquipmentRepository;
 import com.charron.api.fleet.domain.*;
 import org.springframework.http.HttpStatus;
@@ -24,13 +25,17 @@ public class EquipmentController {
 
 
     private final EquipmentConfigurationRepository configurationRepository;
+    private final EquipmentRegistrationService registrationService;
+
 
     public EquipmentController(
             EquipmentRepository equipmentRepository,
-            EquipmentConfigurationRepository configurationRepository
+            EquipmentConfigurationRepository configurationRepository,
+            EquipmentRegistrationService registrationService
     ) {
         this.equipmentRepository = equipmentRepository;
         this.configurationRepository = configurationRepository;
+        this.registrationService = registrationService;
     }
 
 
@@ -42,22 +47,21 @@ public class EquipmentController {
                 .toList();
     }
 
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public EquipmentResponse register(
             @RequestBody EquipmentRegistrationRequest request
     ) {
-        Equipment equipment = new Equipment(
-                UUID.randomUUID(),
+        Equipment equipment = registrationService.register(
                 request.name(),
                 request.category(),
                 request.vin()
         );
 
-        equipmentRepository.insertIdentity(equipment);
-
         return toResponse(equipment);
     }
+
 
     private static EquipmentResponse toResponse(Equipment equipment) {
         return new EquipmentResponse(
