@@ -1,11 +1,19 @@
 
 <script lang="ts">
     import { onMount } from 'svelte'
+
     import {
         getEquipmentConfigurations,
         createEquipmentConfiguration,
-        type EquipmentConfiguration, updateEquipmentConfiguration,
+        updateEquipmentConfiguration,
+        getConfigurationCapabilities,
+        addConfigurationCapability,
+        removeConfigurationCapability,
+        EQUIPMENT_CAPABILITIES,
+        type EquipmentConfiguration,
+        type EquipmentCapability,
     } from '../../lib/api/equipmentConfigurations'
+
 
     interface Props {
         equipmentId: string
@@ -16,6 +24,87 @@
     let configurations: EquipmentConfiguration[] = $state([])
     let loading = $state(true)
     let error: string | null = $state(null)
+
+    let expandedConfigurationId = $state<string | null>(null)
+    let configurationCapabilities = $state<EquipmentCapability[]>([])
+    let capabilitiesLoading = $state(false)
+    let capabilitiesSaving = $state(false)
+    let capabilitiesError = $state<string | null>(null)
+
+    async function toggleConfigurationCapabilities(
+        configurationId: string
+    ): Promise<void> {
+        if (expandedConfigurationId === configurationId) {
+            expandedConfigurationId = null
+            return
+        }
+
+        expandedConfigurationId = configurationId
+        configurationCapabilities = []
+        capabilitiesLoading = true
+        capabilitiesError = null
+
+        try {
+            const capabilities = await getConfigurationCapabilities(
+                equipmentId,
+                configurationId
+            )
+
+            if (expandedConfigurationId === configurationId) {
+                configurationCapabilities = capabilities
+            }
+        } catch (err) {
+            if (expandedConfigurationId === configurationId) {
+                capabilitiesError = err instanceof Error
+                    ? err.message
+                    : 'Unable to retrieve configuration capabilities'
+            }
+        } finally {
+            if (expandedConfigurationId === configurationId) {
+                capabilitiesLoading = false
+            }
+        }
+    }
+
+    async function toggleCapability(
+        configurationId: string,
+        capability: EquipmentCapability
+    ): Promise<void> {
+        if (capabilitiesSaving) return
+
+        capabilitiesSaving = true
+        capabilitiesError = null
+
+        const assigned = configurationCapabilities.includes(capability)
+
+        try {
+            if (assigned) {
+                await removeConfigurationCapability(
+                    equipmentId,
+                    configurationId,
+                    capability
+                )
+            } else {
+                await addConfigurationCapability(
+                    equipmentId,
+                    configurationId,
+                    capability
+                )
+            }
+
+            configurationCapabilities = await getConfigurationCapabilities(
+                equipmentId,
+                configurationId
+            )
+        } catch (err) {
+            capabilitiesError = err instanceof Error
+                ? err.message
+                : 'Unable to update configuration capabilities'
+        } finally {
+            capabilitiesSaving = false
+        }
+    }
+
 
     async function loadConfigurations(): Promise<void> {
         loading = true
@@ -257,37 +346,90 @@
         <p class="text-sm text-slate-400">
             No configurations registered for this equipment.
         </p>
+
     {:else}
         <div class="space-y-3">
             {#each configurations as configuration (configuration.id)}
+                <div class="rounded-lg border border-slate-700 bg-slate-800/50 p-4">
+                    <div class="flex items-center justify-between gap-4">
+                        <p class="font-medium text-white">
+                            {configuration.name}
+                        </p>
 
-                <div class="flex items-center justify-between gap-4 rounded-lg border border-slate-700 bg-slate-800/50 p-4">
-                    <p class="font-medium text-white">
-                        {configuration.name}
-                    </p>
-
-                    <div class="flex items-center gap-3">
-        <span
-                class={configuration.active
-                ? 'rounded-full bg-emerald-900/50 px-3 py-1 text-xs text-emerald-300'
-                : 'rounded-full bg-slate-700 px-3 py-1 text-xs text-slate-300'}
-        >
-            {configuration.active ? 'Active' : 'Inactive'}
-        </span>
-
-                        <button
-                                type="button"
-                                onclick={() => handleEdit(configuration)}
-                                class="text-sm text-emerald-400 hover:underline"
+                        <div class="flex flex-wrap items-center gap-3">
+                        <span
+                                class={configuration.active
+                                ? 'rounded-full bg-emerald-900/50 px-3 py-1 text-xs text-emerald-300'
+                                : 'rounded-full bg-slate-700 px-3 py-1 text-xs text-slate-300'}
                         >
-                            Edit
-                        </button>
-                    </div>
-                </div>
+                            {configuration.active ? 'Active' : 'Inactive'}
+                        </span>
 
+                            <button
+                                    type="button"
+                                    onclick={() => toggleConfigurationCapabilities(configuration.id)}
+                                    class="rounded-full border border-slate-600 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-700"
+                            >
+                                {expandedConfigurationId === configuration.id
+                                    ? 'Hide Capabilities'
+                                    : 'Capabilities'}
+                            </button>
+
+                            <button
+                                    type="button"
+                                    onclick={() => handleEdit(configuration)}
+                                    class="text-sm text-emerald-400 hover:underline"
+                            >
+                                Edit
+                            </button>
+                        </div>
+                    </div>
+
+                    {#if expandedConfigurationId === configuration.id}
+                        <div class="mt-4 border-t border-slate-700 pt-4">
+                            <h5 class="mb-3 text-sm font-medium text-white">
+                                Configuration Capabilities
+                            </h5>
+
+                            {#if capabilitiesLoading}
+                                <p class="text-sm text-slate-400">
+                                    Loading capabilities...
+                                </p>
+                            {:else}
+                                <div class="flex flex-wrap gap-2">
+                                    {#each EQUIPMENT_CAPABILITIES as capability}
+                                        <button
+                                                type="button"
+                                                onclick={() => toggleCapability(configuration.id, capability)}
+                                                disabled={capabilitiesSaving}
+                                                aria-pressed={configurationCapabilities.includes(capability)}
+                                                class={configurationCapabilities.includes(capability)
+                                            ? 'rounded-full border border-emerald-600 bg-emerald-900/40 px-3 py-1.5 text-xs text-emerald-300 disabled:opacity-50'
+                                            : 'rounded-full border border-slate-600 px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-700 disabled:opacity-50'}
+                                        >
+                                            {capability.replaceAll('_', ' ')}
+                                        </button>
+                                    {/each}
+                                </div>
+
+                                <p class="mt-3 text-xs text-slate-400">
+                                    Select a capability to assign it.
+                                    Select it again to remove it.
+                                </p>
+                            {/if}
+
+                            {#if capabilitiesError}
+                                <p role="alert" class="mt-3 text-sm text-red-400">
+                                    {capabilitiesError}
+                                </p>
+                            {/if}
+                        </div>
+                    {/if}
+                </div>
             {/each}
         </div>
     {/if}
+
 
     {#if editingConfigurationId}
         <form

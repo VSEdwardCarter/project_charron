@@ -77,4 +77,76 @@ export async function updateEquipmentConfiguration(
     return (await response.json()) as EquipmentConfiguration
 }
 
+export const EQUIPMENT_CAPABILITIES = [
+    'PROPULSION',
+    'TOWING',
+    'CARGO_TRANSPORT',
+    'ENCLOSED_CARGO',
+    'TEMPERATURE_CONTROL',
+    'MATERIAL_HANDLING',
+    'LIFTING',
+] as const
+
+export type EquipmentCapability =
+    (typeof EQUIPMENT_CAPABILITIES)[number]
+
+export async function getConfigurationCapabilities(
+    equipmentId: string,
+    configurationId: string
+): Promise<EquipmentCapability[]> {
+    const response = await fetch(
+        `/api/equipment/${encodeURIComponent(equipmentId)}/configurations/${encodeURIComponent(configurationId)}/capabilities`
+    )
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to retrieve configuration capabilities (${response.status})`
+        )
+    }
+
+    return (await response.json()) as EquipmentCapability[]
+}
+
+export async function addConfigurationCapability(
+    equipmentId: string,
+    configurationId: string,
+    capability: EquipmentCapability
+): Promise<void> {
+    const response = await fetch(
+        `/api/equipment/${encodeURIComponent(equipmentId)}/configurations/${encodeURIComponent(configurationId)}/capabilities`,
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ capability }),
+        }
+    )
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to add configuration capability (${response.status})`
+        )
+    }
+}
+
+export async function removeConfigurationCapability(
+    equipmentId: string,
+    configurationId: string,
+    capability: EquipmentCapability
+): Promise<void> {
+    const response = await fetch(
+        `/api/equipment/${encodeURIComponent(equipmentId)}/configurations/${encodeURIComponent(configurationId)}/capabilities/${encodeURIComponent(capability)}`,
+        {
+            method: 'DELETE',
+        }
+    )
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to remove configuration capability (${response.status})`
+        )
+    }
+}
+
 

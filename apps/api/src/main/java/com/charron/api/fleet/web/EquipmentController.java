@@ -39,6 +39,99 @@ public class EquipmentController {
     }
 
 
+    @GetMapping("/{id}/configurations/{configurationId}/capabilities")
+    public ResponseEntity<Set<EquipmentCapability>> findConfigurationCapabilities(
+            @PathVariable UUID id,
+            @PathVariable UUID configurationId
+    ) {
+        requireConfiguration(id, configurationId);
+
+        return ResponseEntity.ok(
+                configurationRepository.findCapabilitiesByConfigurationId(
+                        configurationId
+                )
+        );
+    }
+
+    @PostMapping("/{id}/configurations/{configurationId}/capabilities")
+    @ResponseStatus(HttpStatus.CREATED)
+    public void addConfigurationCapability(
+            @PathVariable UUID id,
+            @PathVariable UUID configurationId,
+            @RequestBody EquipmentCapabilityRequest request
+    ) {
+        requireConfiguration(id, configurationId);
+
+        if (request == null || request.capability() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Configuration capability is required"
+            );
+        }
+
+        try {
+            configurationRepository.insertCapability(
+                    configurationId,
+                    request.capability()
+            );
+        } catch (DuplicateKeyException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Configuration already has this capability",
+                    exception
+            );
+        }
+    }
+
+    @DeleteMapping("/{id}/configurations/{configurationId}/capabilities/{capability}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeConfigurationCapability(
+            @PathVariable UUID id,
+            @PathVariable UUID configurationId,
+            @PathVariable EquipmentCapability capability
+    ) {
+        requireConfiguration(id, configurationId);
+
+        boolean removed = configurationRepository.removeCapability(
+                configurationId,
+                capability
+        );
+
+        if (!removed) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Configuration capability not assigned"
+            );
+        }
+    }
+
+    private void requireConfiguration(
+            UUID equipmentId,
+            UUID configurationId
+    ) {
+        if (equipmentRepository.findIdentityById(equipmentId).isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Equipment not found"
+            );
+        }
+
+        EquipmentConfiguration configuration =
+                configurationRepository.findById(configurationId)
+                        .orElseThrow(() -> new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Configuration not found"
+                        ));
+
+        if (!configuration.getEquipmentId().equals(equipmentId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Configuration does not belong to this equipment"
+            );
+        }
+    }
+
+
     @GetMapping
     public List<EquipmentResponse> findAll() {
         return equipmentRepository.findAllIdentities()
