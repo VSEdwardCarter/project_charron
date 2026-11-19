@@ -2,12 +2,14 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import { getEquipment, registerEquipment, type EquipmentRegistrationData } from '../../lib/api/equipment'
+    import EquipmentDetails from './EquipmentDetails.svelte'
     import {
         categoryLabels,
         type Equipment, type EquipmentCategory,
     } from '../../lib/models/equipment'
     import EquipmentRegistrationForm from './EquipmentRegistrationForm.svelte'
 
+    let selectedEquipment: Equipment | null = $state(null)
     let showRegistrationForm = $state(false)
     let equipment: Equipment[] = $state([])
     let loading = $state(true)
@@ -57,7 +59,12 @@
     })
 </script>
 
-
+{#if selectedEquipment}
+    <EquipmentDetails
+            equipment={selectedEquipment}
+            onBack={() => selectedEquipment = null}
+    />
+{:else}
 
 {#if !showRegistrationForm}
     <div class="mb-6 flex justify-end">
@@ -129,9 +136,17 @@
                 <tbody class="divide-y divide-slate-800">
                 {#each equipment as item (item.id)}
                     <tr class="transition-colors hover:bg-slate-800/40">
+
                         <td class="px-6 py-4 font-medium text-white">
-                            {item.name}
+                            <button
+                                    type="button"
+                                    onclick={() => selectedEquipment = item}
+                                    class="text-left hover:text-emerald-400 hover:underline"
+                            >
+                                {item.name}
+                            </button>
                         </td>
+
 
                         <td class="px-6 py-4 text-slate-300">
                             {categoryLabels[item.category]}
@@ -147,3 +162,4 @@
         </div>
     {/if}
 </div>
+{/if}
