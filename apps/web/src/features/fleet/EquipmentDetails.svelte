@@ -17,6 +17,7 @@
         type EquipmentSpecifications,
         type EquipmentSpecificationsInput,
     } from '../../lib/api/equipmentSpecifications'
+    import EquipmentCapabilities from './EquipmentCapabilities.svelte'
 
     import EquipmentSpecificationsForm from './EquipmentSpecificationsForm.svelte'
 
@@ -182,6 +183,7 @@
                         </div>
                     </dl>
                 {/if}
+                <EquipmentCapabilities equipmentId={equipment.id} />
             </section>
         </div>
     {/if}

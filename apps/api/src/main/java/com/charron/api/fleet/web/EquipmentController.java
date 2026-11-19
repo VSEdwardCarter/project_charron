@@ -4,16 +4,15 @@ package com.charron.api.fleet.web;
 import com.charron.api.common.measurement.Dimensions;
 import com.charron.api.common.measurement.Weight;
 import com.charron.api.fleet.application.EquipmentRepository;
-import com.charron.api.fleet.domain.Equipment;
-import com.charron.api.fleet.domain.EquipmentCategory;
-import com.charron.api.fleet.domain.EquipmentSpecifications;
-import com.charron.api.fleet.domain.WeightSpecifications;
+import com.charron.api.fleet.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.dao.DuplicateKeyException;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -212,6 +211,86 @@ public class EquipmentController {
             Long grossWeightRatingGrams,
             Long ratedPayloadCapacityGrams
     ) {
+    }
+
+
+    @GetMapping("/{id}/capabilities")
+    public ResponseEntity<Set<EquipmentCapability>> findCapabilities(
+            @PathVariable UUID id
+    ) {
+        if (equipmentRepository.findIdentityById(id).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(
+                equipmentRepository.findCapabilitiesByEquipmentId(id)
+        );
+    }
+
+
+    @PostMapping("/{id}/capabilities")
+    @ResponseStatus(HttpStatus.CREATED)
+    public void addCapability(
+            @PathVariable UUID id,
+            @RequestBody EquipmentCapabilityRequest request
+    ) {
+        if (equipmentRepository.findIdentityById(id).isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Equipment not found"
+            );
+        }
+
+        if (request == null || request.capability() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Equipment capability is required"
+            );
+        }
+
+        try {
+            equipmentRepository.insertCapability(
+                    id,
+                    request.capability()
+            );
+        } catch (DuplicateKeyException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Equipment already has this capability",
+                    exception
+            );
+        }
+    }
+
+    public record EquipmentCapabilityRequest(
+            EquipmentCapability capability
+    ) {
+    }
+
+    @DeleteMapping("/{id}/capabilities/{capability}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeCapability(
+            @PathVariable UUID id,
+            @PathVariable EquipmentCapability capability
+    ) {
+        if (equipmentRepository.findIdentityById(id).isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Equipment not found"
+            );
+        }
+
+        boolean removed = equipmentRepository.removeCapability(
+                id,
+                capability
+        );
+
+        if (!removed) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Equipment capability not assigned"
+            );
+        }
     }
 
 
