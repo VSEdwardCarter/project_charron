@@ -9,6 +9,8 @@
         getConfigurationCapabilities,
         addConfigurationCapability,
         removeConfigurationCapability,
+        getConfigurationOperatingWeights,
+        type EquipmentOperatingWeights,
         EQUIPMENT_CAPABILITIES,
         type EquipmentConfiguration,
         type EquipmentCapability, updateConfigurationWeightAdjustment,
@@ -35,6 +37,59 @@
     let weightAdjustmentKg = $state('')
     let weightSaving = $state(false)
     let weightError = $state<string | null>(null)
+
+
+    let operatingWeightsId = $state<string | null>(null)
+    let operatingWeights = $state<EquipmentOperatingWeights | null>(null)
+    let operatingWeightsLoading = $state(false)
+    let operatingWeightsError = $state<string | null>(null)
+
+    async function toggleOperatingWeights(
+        configuration: EquipmentConfiguration
+    ): Promise<void> {
+        if (operatingWeightsId === configuration.id) {
+            operatingWeightsId = null
+            operatingWeights = null
+            operatingWeightsError = null
+            operatingWeightsLoading = false
+            return
+        }
+
+        operatingWeightsId = configuration.id
+        operatingWeights = null
+        operatingWeightsError = null
+        operatingWeightsLoading = true
+
+        try {
+            const result = await getConfigurationOperatingWeights(
+                equipmentId,
+                configuration.id
+            )
+
+            if (operatingWeightsId === configuration.id) {
+                operatingWeights = result
+            }
+        } catch (err) {
+            if (operatingWeightsId === configuration.id) {
+                operatingWeightsError = err instanceof Error
+                    ? err.message
+                    : 'Unable to calculate operating weights'
+            }
+        } finally {
+            if (operatingWeightsId === configuration.id) {
+                operatingWeightsLoading = false
+            }
+        }
+    }
+
+
+    function formatOperatingWeight(grams: number): string {
+        const kilograms = Math.floor(grams / 1000)
+
+        return `${kilograms.toLocaleString()} kg`
+    }
+
+
 
     function startWeightEdit(configuration: EquipmentConfiguration): void {
         editingWeightId = configuration.id
@@ -76,15 +131,23 @@
         weightError = null
 
         try {
+
             const updated = await updateConfigurationWeightAdjustment(
                 equipmentId,
                 configuration.id,
                 grams
             )
 
+            // Invalidate previously calculated operating weights
+            operatingWeightsId = null
+            operatingWeights = null
+            operatingWeightsError = null
+            operatingWeightsLoading = false
+
             configurations = configurations.map(item =>
                 item.id === updated.id ? updated : item
             )
+
 
             cancelWeightEdit()
         } catch (err) {
@@ -95,6 +158,7 @@
             weightSaving = false
         }
     }
+
 
     async function clearWeightAdjustment(
         configuration: EquipmentConfiguration
@@ -111,6 +175,12 @@
                 null
             )
 
+            // Invalidate previously calculated operating weights
+            operatingWeightsId = null
+            operatingWeights = null
+            operatingWeightsError = null
+            operatingWeightsLoading = false
+
             configurations = configurations.map(item =>
                 item.id === updated.id ? updated : item
             )
@@ -124,6 +194,7 @@
             weightSaving = false
         }
     }
+
 
 
     async function toggleConfigurationCapabilities(
@@ -275,6 +346,7 @@
         saveError = null
     }
 
+
     async function handleUpdate(event: SubmitEvent): Promise<void> {
         event.preventDefault()
 
@@ -296,6 +368,12 @@
                 }
             )
 
+            // Invalidate previously calculated operating weights
+            operatingWeightsId = null
+            operatingWeights = null
+            operatingWeightsError = null
+            operatingWeightsLoading = false
+
             configurations = configurations
                 .map(configuration =>
                     configuration.id === updated.id
@@ -313,6 +391,7 @@
             saving = false
         }
     }
+
 
 
 
@@ -533,6 +612,76 @@
                                     </p>
                                 </div>
 
+                                <div class="mt-4 border-t border-slate-700 pt-4">
+                                    <div class="flex flex-wrap items-center justify-between gap-3">
+                                        <div>
+                                            <p class="text-sm font-medium text-white">
+                                                Calculated Operating Weights
+                                            </p>
+                                            <p class="mt-1 text-xs text-slate-400">
+                                                Effective empty weight and available payload
+                                            </p>
+                                        </div>
+
+                                        {#if configuration.active}
+                                            <button
+                                                    type="button"
+                                                    onclick={() => toggleOperatingWeights(configuration)}
+                                                    class="rounded-full border border-slate-600 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-700"
+                                            >
+                                                {operatingWeightsId === configuration.id
+                                                    ? 'Hide Weights'
+                                                    : 'View Weights'}
+                                            </button>
+                                        {:else}
+            <span class="text-xs text-slate-400">
+                Activate configuration to calculate
+            </span>
+                                        {/if}
+                                    </div>
+
+                                    {#if operatingWeightsId === configuration.id && configuration.active}
+                                        <div class="mt-4 rounded-lg bg-slate-950/60 p-4">
+                                            {#if operatingWeightsLoading}
+                                                <p class="text-sm text-slate-400">
+                                                    Calculating operating weights...
+                                                </p>
+                                            {:else if operatingWeightsError}
+                                                <p role="alert" class="text-sm text-amber-400">
+                                                    {operatingWeightsError}
+                                                </p>
+                                            {:else if operatingWeights}
+                                                <div class="grid gap-4 sm:grid-cols-2">
+                                                    <div>
+                                                        <p class="text-xs text-slate-400">
+                                                            Effective Empty Weight
+                                                        </p>
+                                                        <p class="mt-1 text-lg font-semibold text-white">
+                                                            {formatOperatingWeight(
+                                                                operatingWeights.effectiveEmptyWeightGrams
+                                                            )}
+                                                        </p>
+                                                    </div>
+
+                                                    <div>
+                                                        <p class="text-xs text-slate-400">
+                                                            Available Payload
+                                                        </p>
+                                                        <p class="mt-1 text-lg font-semibold text-emerald-300">
+                                                            {formatOperatingWeight(
+                                                                operatingWeights.availablePayloadGrams
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <p class="mt-3 text-xs text-slate-500">
+                                                    Calculated values. Baseline specifications remain unchanged.
+                                                </p>
+                                            {/if}
+                                        </div>
+                                    {/if}
+                                </div>
                                 {#if editingWeightId !== configuration.id}
                                     <button
                                             type="button"

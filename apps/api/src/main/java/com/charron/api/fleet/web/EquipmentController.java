@@ -606,6 +606,71 @@ public class EquipmentController {
     }
 
 
+    @GetMapping("/{id}/configurations/{configurationId}/operating-weights")
+    public OperatingWeightsResponse getConfigurationOperatingWeights(
+            @PathVariable UUID id,
+            @PathVariable UUID configurationId
+    ) {
+        Equipment equipment = equipmentRepository.findIdentityById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Equipment not found"
+                ));
+
+        EquipmentConfiguration configuration =
+                configurationRepository.findById(configurationId)
+                        .filter(item -> item.getEquipmentId().equals(id))
+                        .orElseThrow(() -> new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Configuration not found for this equipment"
+                        ));
+
+        EquipmentSpecifications specifications =
+                equipmentRepository.findSpecificationsByEquipmentId(id)
+                        .orElseThrow(() -> new ResponseStatusException(
+                                HttpStatus.UNPROCESSABLE_ENTITY,
+                                "Equipment specifications are not available"
+                        ));
+
+        equipment.updateSpecifications(specifications);
+
+        try {
+            Weight effectiveEmptyWeight =
+                    EquipmentWeightResolver.resolveEmptyWeight(
+                            equipment,
+                            configuration
+                    );
+
+            Weight availablePayload =
+                    EquipmentWeightResolver.resolveAvailablePayload(
+                            equipment,
+                            configuration
+                    );
+
+            return new OperatingWeightsResponse(
+                    id,
+                    configurationId,
+                    effectiveEmptyWeight.grams(),
+                    availablePayload.grams()
+            );
+        } catch (IllegalStateException | IllegalArgumentException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    exception.getMessage(),
+                    exception
+            );
+        }
+    }
+
+    public record OperatingWeightsResponse(
+            UUID equipmentId,
+            UUID configurationId,
+            long effectiveEmptyWeightGrams,
+            long availablePayloadGrams
+    ) {
+    }
+
+
 
 }
 

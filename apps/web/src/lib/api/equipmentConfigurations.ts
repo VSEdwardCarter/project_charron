@@ -178,3 +178,27 @@ export async function updateConfigurationWeightAdjustment(
     return (await response.json()) as EquipmentConfiguration
 }
 
+
+export interface EquipmentOperatingWeights {
+    equipmentId: string
+    configurationId: string
+    effectiveEmptyWeightGrams: number
+    availablePayloadGrams: number
+}
+
+export async function getConfigurationOperatingWeights(
+    equipmentId: string,
+    configurationId: string
+): Promise<EquipmentOperatingWeights> {
+    const response = await fetch(
+        `/api/equipment/${encodeURIComponent(equipmentId)}/configurations/${encodeURIComponent(configurationId)}/operating-weights`
+    )
+
+    if (!response.ok) {
+        throw new Error(
+            `Unable to calculate operating weights (${response.status})`
+        )
+    }
+
+    return (await response.json()) as EquipmentOperatingWeights
+}

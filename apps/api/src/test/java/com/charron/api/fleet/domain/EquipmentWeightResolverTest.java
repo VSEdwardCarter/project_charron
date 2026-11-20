@@ -36,6 +36,37 @@ class EquipmentWeightResolverTest {
         return equipment;
     }
 
+    private Equipment createEquipmentWithPayload(
+            long emptyWeightGrams,
+            Long grossWeightRatingGrams,
+            Long ratedPayloadGrams
+    ) {
+        Equipment equipment = new Equipment(
+                UUID.randomUUID(),
+                "Payload Test Trailer",
+                EquipmentCategory.TRAILER,
+                null
+        );
+
+        equipment.updateSpecifications(
+                new EquipmentSpecifications(
+                        null,
+                        new WeightSpecifications(
+                                new Weight(emptyWeightGrams),
+                                grossWeightRatingGrams == null
+                                        ? null
+                                        : new Weight(grossWeightRatingGrams),
+                                ratedPayloadGrams == null
+                                        ? null
+                                        : new Weight(ratedPayloadGrams)
+                        )
+                )
+        );
+
+        return equipment;
+    }
+
+
     private EquipmentConfiguration createConfiguration(
             Equipment equipment,
             boolean active,
@@ -251,4 +282,182 @@ class EquipmentWeightResolverTest {
                 )
         );
     }
+
+    @Test
+    void availablePayloadDecreasesWithAddedConfigurationWeight() {
+        Equipment equipment = createEquipmentWithPayload(
+                2_000_000L,
+                3_000_000L,
+                800_000L
+        );
+
+        EquipmentConfiguration configuration = createConfiguration(
+                equipment,
+                true,
+                new ConfigurationWeightAdjustment(100_000L)
+        );
+
+        assertEquals(
+                new Weight(700_000L),
+                EquipmentWeightResolver.resolveAvailablePayload(
+                        equipment, configuration
+                )
+        );
+    }
+
+    @Test
+    void availablePayloadIncreasesWithReducedConfigurationWeight() {
+        Equipment equipment = createEquipmentWithPayload(
+                2_000_000L,
+                3_000_000L,
+                800_000L
+        );
+
+        EquipmentConfiguration configuration = createConfiguration(
+                equipment,
+                true,
+                new ConfigurationWeightAdjustment(-100_000L)
+        );
+
+        assertEquals(
+                new Weight(900_000L),
+                EquipmentWeightResolver.resolveAvailablePayload(
+                        equipment, configuration
+                )
+        );
+    }
+
+    @Test
+    void availablePayloadUsesGrossWeightAllowanceWhenMoreRestrictive() {
+        Equipment equipment = createEquipmentWithPayload(
+                2_000_000L,
+                3_000_000L,
+                950_000L
+        );
+
+        EquipmentConfiguration configuration = createConfiguration(
+                equipment,
+                true,
+                new ConfigurationWeightAdjustment(100_000L)
+        );
+
+        assertEquals(
+                new Weight(850_000L),
+                EquipmentWeightResolver.resolveAvailablePayload(
+                        equipment, configuration
+                )
+        );
+    }
+
+    @Test
+    void availablePayloadUsesGrossRatingWhenRatedPayloadUnknown() {
+        Equipment equipment = createEquipmentWithPayload(
+                2_000_000L,
+                3_000_000L,
+                null
+        );
+
+        assertEquals(
+                new Weight(1_000_000L),
+                EquipmentWeightResolver.resolveAvailablePayload(
+                        equipment, null
+                )
+        );
+    }
+
+    @Test
+    void availablePayloadUsesRatedPayloadWhenGrossRatingUnknown() {
+        Equipment equipment = createEquipmentWithPayload(
+                2_000_000L,
+                null,
+                800_000L
+        );
+
+        EquipmentConfiguration configuration = createConfiguration(
+                equipment,
+                true,
+                new ConfigurationWeightAdjustment(100_000L)
+        );
+
+        assertEquals(
+                new Weight(700_000L),
+                EquipmentWeightResolver.resolveAvailablePayload(
+                        equipment, configuration
+                )
+        );
+    }
+
+    @Test
+    void availablePayloadCannotBecomeNegative() {
+        Equipment equipment = createEquipmentWithPayload(
+                2_000_000L,
+                3_000_000L,
+                800_000L
+        );
+
+        EquipmentConfiguration configuration = createConfiguration(
+                equipment,
+                true,
+                new ConfigurationWeightAdjustment(900_000L)
+        );
+
+        assertEquals(
+                new Weight(0L),
+                EquipmentWeightResolver.resolveAvailablePayload(
+                        equipment, configuration
+                )
+        );
+    }
+
+    @Test
+    void rejectsAvailablePayloadCalculationWithoutCapacityLimits() {
+        Equipment equipment = createEquipmentWithPayload(
+                2_000_000L,
+                null,
+                null
+        );
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> EquipmentWeightResolver.resolveAvailablePayload(
+                        equipment, null
+                )
+        );
+    }
+
+    @Test
+    void availablePayloadCalculationPreservesBaselineSpecifications() {
+        Equipment equipment = createEquipmentWithPayload(
+                2_000_000L,
+                3_000_000L,
+                800_000L
+        );
+
+        EquipmentConfiguration configuration = createConfiguration(
+                equipment,
+                true,
+                new ConfigurationWeightAdjustment(100_000L)
+        );
+
+        Weight availablePayload =
+                EquipmentWeightResolver.resolveAvailablePayload(
+                        equipment, configuration
+                );
+
+        assertEquals(new Weight(700_000L), availablePayload);
+
+        WeightSpecifications original =
+                equipment.getSpecifications().weightSpecifications();
+
+        assertEquals(new Weight(2_000_000L), original.emptyWeight());
+        assertEquals(new Weight(3_000_000L), original.grossWeightRating());
+        assertEquals(new Weight(800_000L), original.ratedPayloadCapacity());
+
+        assertEquals(
+                new ConfigurationWeightAdjustment(100_000L),
+                configuration.getWeightAdjustment()
+        );
+    }
+
+
 }

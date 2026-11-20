@@ -68,4 +68,62 @@ public final class EquipmentWeightResolver {
 
         return effectiveWeight;
     }
+
+    public static Weight resolveAvailablePayload(
+            Equipment equipment,
+            EquipmentConfiguration configuration
+    ) {
+        Weight effectiveEmptyWeight =
+                resolveEmptyWeight(equipment, configuration);
+
+        WeightSpecifications weights =
+                equipment.getSpecifications().weightSpecifications();
+
+        Weight baseEmptyWeight = weights.emptyWeight();
+        Weight grossWeightRating = weights.grossWeightRating();
+        Weight ratedPayloadCapacity = weights.ratedPayloadCapacity();
+
+        if (grossWeightRating == null
+                && ratedPayloadCapacity == null) {
+            throw new IllegalStateException(
+                    "Gross weight rating or rated payload capacity is required"
+            );
+        }
+
+        long configurationDelta = Math.subtractExact(
+                effectiveEmptyWeight.grams(),
+                baseEmptyWeight.grams()
+        );
+
+        Long availableByGrossRating = grossWeightRating == null
+                ? null
+                : Math.subtractExact(
+                grossWeightRating.grams(),
+                effectiveEmptyWeight.grams()
+        );
+
+        Long availableByRatedPayload = ratedPayloadCapacity == null
+                ? null
+                : Math.subtractExact(
+                ratedPayloadCapacity.grams(),
+                configurationDelta
+        );
+
+        long availableGrams;
+
+        if (availableByGrossRating != null
+                && availableByRatedPayload != null) {
+            availableGrams = Math.min(
+                    availableByGrossRating,
+                    availableByRatedPayload
+            );
+        } else if (availableByGrossRating != null) {
+            availableGrams = availableByGrossRating;
+        } else {
+            availableGrams = availableByRatedPayload;
+        }
+
+        return new Weight(Math.max(0L, availableGrams));
+    }
+
 }

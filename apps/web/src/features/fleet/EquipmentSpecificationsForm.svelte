@@ -13,6 +13,10 @@
 
     let { specifications, onCancel, onSave }: Props = $props()
 
+    let saving = $state(false)
+    let error = $state<string | null>(null)
+
+
     const MM_PER_FOOT = 304.8
     const GRAMS_PER_POUND = 453.59237
 
@@ -58,6 +62,10 @@
             GRAMS_PER_POUND
         )
     }
+
+    $effect(() => {
+        initializeForm(specifications)
+    })
 
 
 
