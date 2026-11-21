@@ -10,7 +10,8 @@
         type EquipmentCargoSpace,
         type CreateEquipmentCargoSpaceInput,
     } from '../../lib/api/equipmentCargoSpaces'
-
+    import CargoSpace3D from '../loading/CargoSpace3D.svelte'
+    import type { CargoPlacement3D } from '../../lib/models/cargoPlacement'
     interface Props {
         equipmentId: string
     }
@@ -31,6 +32,54 @@
     let length = $state('')
     let width = $state('')
     let height = $state('')
+
+
+    function createDemoPlacements(
+        cargoSpaceId: string
+    ): CargoPlacement3D[] {
+        return [
+            {
+                cargoId: 'demo-generator',
+                cargoSpaceId,
+                unitIndex: 0,
+                xMm: 0,
+                yMm: 0,
+                zMm: 0,
+                orientation: 'ORIGINAL',
+                lengthMm: 1200,
+                widthMm: 800,
+                heightMm: 1000,
+                label: 'Demo Generator'
+            },
+            {
+                cargoId: 'demo-generator',
+                cargoSpaceId,
+                unitIndex: 1,
+                xMm: 1200,
+                yMm: 0,
+                zMm: 0,
+                orientation: 'ORIGINAL',
+                lengthMm: 1200,
+                widthMm: 800,
+                heightMm: 1000,
+                label: 'Demo Generator'
+            },
+            {
+                cargoId: 'demo-crate',
+                cargoSpaceId,
+                unitIndex: 0,
+                xMm: 2400,
+                yMm: 0,
+                zMm: 0,
+                orientation: 'ORIGINAL',
+                lengthMm: 600,
+                widthMm: 600,
+                heightMm: 600,
+                label: 'Demo Supply Crate'
+            }
+        ]
+    }
+
 
     onMount(() => {
         void loadSpaces()
@@ -216,11 +265,11 @@
             </p>
         </div>
 
+
     {:else}
-        <div class="grid gap-4 lg:grid-cols-2">
+        <div class="grid min-w-0 grid-cols-1 gap-4">
             {#each spaces as space (space.id)}
-                <div class="rounded-xl border border-slate-700
-                            bg-slate-950 p-5">
+                <div class="min-w-0 w-full overflow-hidden rounded-xl border border-slate-700 bg-slate-950 p-5">
 
                     <h4 class="font-semibold text-white">
                         {space.name}
@@ -261,10 +310,30 @@
                             </p>
                         </div>
                     </div>
+
+                    <!-- 3D visualization -->
+                    {#if space.usableHeightMm !== null}
+                        <div class="mt-6 border-t border-slate-700 pt-4">
+                            <h4 class="mb-3 font-semibold text-white">
+                                3D Cargo Space
+                            </h4>
+
+
+                            <CargoSpace3D
+                                    lengthMm={space.usableLengthMm}
+                                    widthMm={space.usableWidthMm}
+                                    heightMm={space.usableHeightMm}
+                                    placements={createDemoPlacements(space.id)}
+                            />
+
+                        </div>
+                    {/if}
+
                 </div>
             {/each}
         </div>
     {/if}
+
 
     {#if showForm}
         <form
