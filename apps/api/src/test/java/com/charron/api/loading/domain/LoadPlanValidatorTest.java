@@ -319,7 +319,7 @@ class LoadPlanValidatorTest {
     }
 
     @Test
-    void rejectsCollisionEvaluationWhenDimensionsUnknown() {
+    void reportsIndeterminateWhenDimensionsUnknown(){
         Cargo cargo = new Cargo(
                 UUID.randomUUID(), "Unmeasured Freight", null, null
         );
@@ -332,7 +332,7 @@ class LoadPlanValidatorTest {
         );
 
         assertEquals(
-                LoadPlanValidator.Status.INVALID,
+                LoadPlanValidator.Status.INDETERMINATE,
                 result.status()
         );
 
