@@ -4,7 +4,6 @@ package com.charron.api.integration.infrastructure;
 import com.charron.api.integration.application.ExternalSourceRecordRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +23,6 @@ class JdbcExternalSourceRecordRepositoryTest {
     private ExternalSourceRecordRepository repository;
 
     @Autowired
-    @Qualifier("jdbcTemplate")
     private JdbcTemplate jdbcTemplate;
 
     private String newExternalId() {
@@ -33,6 +31,8 @@ class JdbcExternalSourceRecordRepositoryTest {
 
     @Test
     void insertsAndRetrievesSourceRecord() {
+        long initialCount = repository.count("olist", "product");
+
         String externalId = newExternalId();
 
         Map<String, Object> payload = Map.of(
@@ -42,24 +42,31 @@ class JdbcExternalSourceRecordRepositoryTest {
         );
 
         repository.upsert(
-                "olist", "product", externalId, payload
+                "olist",
+                "product",
+                externalId,
+                payload
         );
 
         assertEquals(
                 payload,
                 repository.findPayload(
-                        "olist", "product", externalId
+                        "olist",
+                        "product",
+                        externalId
                 ).orElseThrow()
         );
 
         assertEquals(
-                1L,
+                initialCount + 1,
                 repository.count("olist", "product")
         );
     }
 
     @Test
     void identicalReplayPreservesRecordAndTimestamps() {
+        long initialCount = repository.count("olist", "product");
+
         String externalId = newExternalId();
 
         Map<String, Object> payload = Map.of(
@@ -68,7 +75,10 @@ class JdbcExternalSourceRecordRepositoryTest {
         );
 
         repository.upsert(
-                "olist", "product", externalId, payload
+                "olist",
+                "product",
+                externalId,
+                payload
         );
 
         UUID originalId = findRecordId(externalId);
@@ -88,29 +98,43 @@ class JdbcExternalSourceRecordRepositoryTest {
         );
 
         repository.upsert(
-                "olist", "product", externalId, payload
+                "olist",
+                "product",
+                externalId,
+                payload
         );
 
-        assertEquals(originalId, findRecordId(externalId));
+        assertEquals(
+                originalId,
+                findRecordId(externalId)
+        );
 
         assertEquals(
                 historicalTime,
-                findTimestamp(externalId, "first_ingested_at")
+                findTimestamp(
+                        externalId,
+                        "first_ingested_at"
+                )
         );
 
         assertEquals(
                 historicalTime,
-                findTimestamp(externalId, "last_ingested_at")
+                findTimestamp(
+                        externalId,
+                        "last_ingested_at"
+                )
         );
 
         assertEquals(
-                1L,
+                initialCount + 1,
                 repository.count("olist", "product")
         );
     }
 
     @Test
     void changedPayloadUpdatesExistingRecord() {
+        long initialCount = repository.count("olist", "product");
+
         String externalId = newExternalId();
 
         repository.upsert(
@@ -143,34 +167,49 @@ class JdbcExternalSourceRecordRepositoryTest {
                 Map.of("product_weight_g", 300)
         );
 
-        assertEquals(originalId, findRecordId(externalId));
+        assertEquals(
+                originalId,
+                findRecordId(externalId)
+        );
 
         assertEquals(
                 300,
                 repository.findPayload(
-                        "olist", "product", externalId
+                        "olist",
+                        "product",
+                        externalId
                 ).orElseThrow().get("product_weight_g")
         );
 
         assertEquals(
                 historicalTime,
-                findTimestamp(externalId, "first_ingested_at")
+                findTimestamp(
+                        externalId,
+                        "first_ingested_at"
+                )
         );
 
         assertTrue(
                 findTimestamp(
-                        externalId, "last_ingested_at"
+                        externalId,
+                        "last_ingested_at"
                 ).isAfter(historicalTime)
         );
 
         assertEquals(
-                1L,
+                initialCount + 1,
                 repository.count("olist", "product")
         );
     }
 
     @Test
     void separatesRecordsBySourceSystem() {
+        long initialOlistCount =
+                repository.count("olist", "product");
+
+        long initialPartnerCount =
+                repository.count("partner_b", "product");
+
         String externalId = newExternalId();
 
         repository.upsert(
@@ -190,19 +229,30 @@ class JdbcExternalSourceRecordRepositoryTest {
         assertEquals(
                 "olist",
                 repository.findPayload(
-                        "olist", "product", externalId
+                        "olist",
+                        "product",
+                        externalId
                 ).orElseThrow().get("source")
         );
 
         assertEquals(
                 "partner_b",
                 repository.findPayload(
-                        "partner_b", "product", externalId
+                        "partner_b",
+                        "product",
+                        externalId
                 ).orElseThrow().get("source")
         );
 
-        assertEquals(1L, repository.count("olist", "product"));
-        assertEquals(1L, repository.count("partner_b", "product"));
+        assertEquals(
+                initialOlistCount + 1,
+                repository.count("olist", "product")
+        );
+
+        assertEquals(
+                initialPartnerCount + 1,
+                repository.count("partner_b", "product")
+        );
     }
 
     @Test
@@ -241,7 +291,6 @@ class JdbcExternalSourceRecordRepositoryTest {
         );
     }
 
-
     private Instant findTimestamp(
             String externalId,
             String column
@@ -254,12 +303,12 @@ class JdbcExternalSourceRecordRepositoryTest {
         }
 
         String sql = """
-            SELECT %s
-            FROM external_source_records
-            WHERE source_system = 'olist'
-              AND entity_type = 'product'
-              AND external_id = ?
-            """.formatted(column);
+                SELECT %s
+                FROM external_source_records
+                WHERE source_system = 'olist'
+                  AND entity_type = 'product'
+                  AND external_id = ?
+                """.formatted(column);
 
         return jdbcTemplate.queryForObject(
                 sql,
@@ -268,5 +317,4 @@ class JdbcExternalSourceRecordRepositoryTest {
                 externalId
         );
     }
-
 }
