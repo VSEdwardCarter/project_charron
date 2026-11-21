@@ -171,4 +171,68 @@ class JdbcEquipmentCargoSpaceRepositoryTest {
                 )
         );
     }
+
+
+    @Test
+    void findByIdReturnsEmptyForUnknownCargoSpace() {
+        var result = cargoSpaceRepository.findById(
+                UUID.randomUUID()
+        );
+
+        assertTrue(result.isEmpty());
+    }
+
+
+    @Test
+    void findsCargoSpaceByIdForCargoVan() {
+        UUID equipmentId = UUID.randomUUID();
+        UUID cargoSpaceId = UUID.randomUUID();
+
+        Equipment van = new Equipment(
+                equipmentId,
+                "Test Cargo Van",
+                EquipmentCategory.CARGO_VAN,
+                null
+        );
+
+        equipmentRepository.insertIdentity(van);
+
+        CargoSpaceSpecifications specifications =
+                new CargoSpaceSpecifications(
+                        CargoSpaceType.ENCLOSED,
+                        3200,
+                        1700,
+                        1800L
+                );
+
+        cargoSpaceRepository.insert(
+                cargoSpaceId,
+                equipmentId,
+                "Rear Cargo Compartment",
+                specifications
+        );
+
+        var result = cargoSpaceRepository.findById(cargoSpaceId);
+
+        assertTrue(result.isPresent());
+
+        var saved = result.orElseThrow();
+
+        assertAll(
+                () -> assertEquals(cargoSpaceId, saved.id()),
+                () -> assertEquals(equipmentId, saved.equipmentId()),
+                () -> assertEquals(
+                        "Rear Cargo Compartment",
+                        saved.name()
+                ),
+                () -> assertEquals(
+                        specifications,
+                        saved.specifications()
+                )
+        );
+    }
+
+
 }
+
+

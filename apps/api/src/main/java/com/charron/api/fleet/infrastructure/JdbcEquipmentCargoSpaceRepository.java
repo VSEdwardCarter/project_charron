@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -106,4 +107,49 @@ public class JdbcEquipmentCargoSpaceRepository
                 equipmentId
         );
     }
+
+
+    @Override
+    public Optional<EquipmentCargoSpace> findById(
+            UUID cargoSpaceId
+    ) {
+        Objects.requireNonNull(
+                cargoSpaceId,
+                "Cargo space ID is required"
+        );
+
+        List<EquipmentCargoSpace> results = jdbcTemplate.query("""
+            SELECT
+                id,
+                equipment_id,
+                name,
+                space_type,
+                usable_length_mm,
+                usable_width_mm,
+                usable_height_mm
+            FROM equipment_cargo_spaces
+            WHERE id = ?
+            """,
+                (rs, rowNum) -> new EquipmentCargoSpace(
+                        rs.getObject("id", UUID.class),
+                        rs.getObject("equipment_id", UUID.class),
+                        rs.getString("name"),
+                        new CargoSpaceSpecifications(
+                                CargoSpaceType.valueOf(
+                                        rs.getString("space_type")
+                                ),
+                                rs.getLong("usable_length_mm"),
+                                rs.getLong("usable_width_mm"),
+                                rs.getObject(
+                                        "usable_height_mm",
+                                        Long.class
+                                )
+                        )
+                ),
+                cargoSpaceId
+        );
+
+        return results.stream().findFirst();
+    }
+
 }

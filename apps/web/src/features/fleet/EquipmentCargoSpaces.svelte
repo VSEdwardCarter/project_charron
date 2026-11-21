@@ -12,6 +12,7 @@
     } from '../../lib/api/equipmentCargoSpaces'
     import CargoSpace3D from '../loading/CargoSpace3D.svelte'
     import type { CargoPlacement3D } from '../../lib/models/cargoPlacement'
+    import LoadingPreview3D from '../loading/LoadingPreview3D.svelte'
     interface Props {
         equipmentId: string
     }
@@ -319,11 +320,12 @@
                             </h4>
 
 
-                            <CargoSpace3D
+
+                            <LoadingPreview3D
+                                    cargoSpaceId={space.id}
                                     lengthMm={space.usableLengthMm}
                                     widthMm={space.usableWidthMm}
                                     heightMm={space.usableHeightMm}
-                                    placements={createDemoPlacements(space.id)}
                             />
 
                         </div>
