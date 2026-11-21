@@ -18,17 +18,21 @@ public class OlistImportRunner implements ApplicationRunner {
 
     private final OlistProductCsvAdapter productAdapter;
     private final OlistSellerCsvAdapter sellerAdapter;
+    private final OlistRelationalCsvAdapter relationalAdapter;
 
     public OlistImportRunner(
             OlistProductCsvAdapter productAdapter,
-            OlistSellerCsvAdapter sellerAdapter
+            OlistSellerCsvAdapter sellerAdapter,
+            OlistRelationalCsvAdapter relationalAdapter
     ) {
         this.productAdapter = Objects.requireNonNull(productAdapter);
         this.sellerAdapter = Objects.requireNonNull(sellerAdapter);
+        this.relationalAdapter = Objects.requireNonNull(relationalAdapter);
     }
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
+
         String entityType = requiredOption(
                 args, "charron.ingestion.olist.entity"
         );
@@ -47,14 +51,21 @@ public class OlistImportRunner implements ApplicationRunner {
         int processed = switch (entityType) {
             case "product" -> productAdapter.ingest(csvPath, limit);
             case "seller" -> sellerAdapter.ingest(csvPath, limit);
+
+            case "order", "order_item", "customer" ->
+                    relationalAdapter.ingest(
+                            entityType,
+                            csvPath,
+                            limit
+                    );
+
             default -> throw new IllegalArgumentException(
                     "Unsupported Olist entity type: " + entityType
             );
         };
 
         System.out.printf(
-                "CHARRON Olist import completed: "
-                        + "entity=%s, records=%d%n",
+                "CHARRON Olist import completed: entity=%s, records=%d%n",
                 entityType,
                 processed
         );

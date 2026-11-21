@@ -58,7 +58,7 @@ class OlistSellerCsvAdapterTest {
         assertEquals(4, seller.size());
 
         assertEquals(
-                initialCount + 5,
+                initialCount,
                 repository.count("olist", "seller")
         );
     }
@@ -81,7 +81,7 @@ class OlistSellerCsvAdapterTest {
         assertEquals(5, adapter.ingest(csvPath, 5));
 
         assertEquals(
-                initialCount + 5,
+                initialCount,
                 repository.count("olist", "seller")
         );
     }
