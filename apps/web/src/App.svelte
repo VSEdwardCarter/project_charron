@@ -4,6 +4,7 @@
   import Sidebar from './lib/components/layout/Sidebar.svelte'
   import FleetPage from "./features/fleet/FleetPage.svelte"
   import CargoPage from './features/cargo/CargoPage.svelte'
+  import MovementsPage from './features/movements/MovementsPage.svelte'
 
   import {
     titles,
@@ -36,8 +37,14 @@
     />
 
     <main class="min-w-0 flex-1 p-8">
-      <div class="mx-auto max-w-6xl">
-        <h2 class="text-3xl font-semibold tracking-tight">
+
+      <div
+              class={activeSection === 'movements'
+    ? 'mx-auto w-full max-w-none'
+    : 'mx-auto max-w-6xl'}
+      >
+
+      <h2 class="text-3xl font-semibold tracking-tight">
           {titles[activeSection]}
         </h2>
 
@@ -59,14 +66,10 @@
             <FleetPage />
           {:else if activeSection === 'cargo'}
             <CargoPage />
-          {:else}
-            <h3 class="text-lg font-medium">
-              Movement Management
-            </h3>
-            <p class="mt-2 text-sm text-slate-400">
-              Movement workflows will be implemented incrementally.
-            </p>
+          {:else if activeSection === 'movements'}
+            <MovementsPage />
           {/if}
+
         </div>
       </div>
     </main>

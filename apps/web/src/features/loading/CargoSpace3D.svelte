@@ -44,29 +44,49 @@
             width / 2
         )
 
-        const boundingRadius = Math.sqrt(
-            length * length +
-            height * height +
-            width * width
-        ) / 2
-
-        const fovRadians = THREE.MathUtils.degToRad(camera.fov)
-
-        const distance =
-            (boundingRadius / Math.sin(fovRadians / 2)) * 1.4
-
         const viewingDirection = new THREE.Vector3(
             1,
             0.7,
             1
         ).normalize()
 
-        camera.position.copy(
-            center.clone().addScaledVector(
-                viewingDirection,
-                distance
+        function frameCargoSpace(): void {
+            const aspect = Math.max(camera.aspect, 0.1)
+
+            const verticalFov = THREE.MathUtils.degToRad(camera.fov)
+
+            const horizontalFov = 2 * Math.atan(
+                Math.tan(verticalFov / 2) * aspect
             )
-        )
+
+            // Conservative bounding sphere around the cargo space.
+            const radius = Math.sqrt(
+                length * length +
+                width * width +
+                height * height
+            ) / 2
+
+            const limitingFov = Math.min(
+                verticalFov,
+                horizontalFov
+            )
+
+            // Smaller margin than the original 1.4 multiplier.
+            const distance =
+                (radius / Math.sin(limitingFov / 2)) * 1.1
+
+            camera.position.copy(
+                center.clone().addScaledVector(
+                    viewingDirection,
+                    distance
+                )
+            )
+
+            camera.lookAt(center)
+        }
+
+
+
 
         // Renderer
         const renderer = new THREE.WebGLRenderer({
@@ -222,6 +242,7 @@
         scene.add(directionalLight)
 
         // Responsive sizing
+
         function resize() {
             const w = container.clientWidth
             const h = container.clientHeight
@@ -232,7 +253,11 @@
             camera.updateProjectionMatrix()
 
             renderer.setSize(w, h, false)
+
+            frameCargoSpace()
+            controls.update()
         }
+
 
         const resizeObserver = new ResizeObserver(resize)
         resizeObserver.observe(container)
