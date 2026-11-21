@@ -22,6 +22,7 @@
     import EquipmentSpecificationsForm from './EquipmentSpecificationsForm.svelte'
     import EquipmentCapabilities from './EquipmentCapabilities.svelte'
     import EquipmentConfigurations from './EquipmentConfigurations.svelte'
+    import EquipmentCargoSpaces from './EquipmentCargoSpaces.svelte'
     import EquipmentVinDetails from './EquipmentVinDetails.svelte'
 
     interface Props {
@@ -32,6 +33,7 @@
     type EquipmentTab =
         | 'Overview'
         | 'Specifications'
+        | 'Cargo Spaces'
         | 'Capabilities'
         | 'Configurations'
         | 'Modifications'
@@ -40,6 +42,7 @@
     const tabs: EquipmentTab[] = [
         'Overview',
         'Specifications',
+        'Cargo Spaces',
         'Capabilities',
         'Configurations',
         'Modifications',
@@ -452,7 +455,8 @@
 
                 </div>
             {/if}
-
+        {:else if activeTab === 'Cargo Spaces'}
+            <EquipmentCargoSpaces equipmentId={equipment.id} />
         {:else if activeTab === 'Capabilities'}
 
             <h3 class="mb-6 text-lg font-semibold text-white">
