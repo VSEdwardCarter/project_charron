@@ -3,6 +3,7 @@
   import Header from './lib/components/layout/Header.svelte'
   import Sidebar from './lib/components/layout/Sidebar.svelte'
   import FleetPage from "./features/fleet/FleetPage.svelte"
+  import CargoPage from './features/cargo/CargoPage.svelte'
 
   import {
     titles,
@@ -57,12 +58,7 @@
           {:else if activeSection === 'fleet'}
             <FleetPage />
           {:else if activeSection === 'cargo'}
-            <h3 class="text-lg font-medium">
-              Cargo Management
-            </h3>
-            <p class="mt-2 text-sm text-slate-400">
-              Cargo workflows will be developed as part of the MVP.
-            </p>
+            <CargoPage />
           {:else}
             <h3 class="text-lg font-medium">
               Movement Management
