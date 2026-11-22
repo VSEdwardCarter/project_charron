@@ -7,6 +7,7 @@ import com.charron.api.fleet.domain.DecodedVehicle;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import java.util.HashMap;
 import java.util.List;
@@ -15,8 +16,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+
 @Repository
+@ConditionalOnProperty(
+        name = "charron.vpic.enabled",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class PostgresVehicleVinDecoder implements VehicleVinDecoder {
+
 
     private static final Pattern VIN_PATTERN =
             Pattern.compile("[A-HJ-NPR-Z0-9]{17}");
