@@ -14,12 +14,13 @@
         getEquipmentCargoSpaces,
         type EquipmentCargoSpace
     } from '../../lib/api/equipmentCargoSpaces'
-
+    import MovementList from './MovementList.svelte'
     import LoadingWorkspace from '../loading/LoadingWorkspace.svelte'
+    import MovementCreationForm from "./MovementCreationForm.svelte";
 
     let equipment: Equipment[] = $state([])
     let spaces: EquipmentCargoSpace[] = $state([])
-
+    let movementRefreshKey = $state(0)
     let selectedEquipmentId = $state('')
     let selectedCargoSpaceId = $state('')
     let workspaceOpen = $state(false)
@@ -123,6 +124,21 @@ selectedCargoSpace.usableHeightMm !== null}
 {:else}
 
     <div class="space-y-6">
+
+        <MovementCreationForm
+                onCreated={() => movementRefreshKey++}
+        />
+
+        <hr class="border-slate-800" />
+
+        {#key movementRefreshKey}
+            <MovementList />
+        {/key}
+
+        <hr class="border-slate-800" />
+
+
+        <hr class="border-slate-800" />
         <div>
             <h3 class="text-xl font-semibold text-white">
                 Movement Planning
