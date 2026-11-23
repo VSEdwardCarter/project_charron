@@ -34,7 +34,11 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
     exit 1
 fi
 
-sudo -v
+# Verify sudo access without requesting a password.
+sudo -n -v || {
+    echo "ERROR: Passwordless sudo is required for deployment."
+    exit 1
+}
 
 echo
 echo "[1/7] Updating source"
