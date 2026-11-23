@@ -1,6 +1,7 @@
 
 <script lang="ts">
     import LoadingPreview3D from './LoadingPreview3D.svelte'
+    import LoadingPlanControls from './LoadingPlanControls.svelte'
 
     interface Props {
         equipmentName: string
@@ -9,6 +10,9 @@
         lengthMm: number
         widthMm: number
         heightMm: number
+        movementId?: string | null
+        movementReference?: string | null
+        equipmentId?: string | null
         onBack: () => void
     }
 
@@ -19,6 +23,9 @@
         lengthMm,
         widthMm,
         heightMm,
+        movementId = null,
+        movementReference = null,
+        equipmentId = null,
         onBack
     }: Props = $props()
 </script>
@@ -31,56 +38,114 @@
             </h3>
 
             <p class="mt-1 text-sm text-slate-400">
-                Plan cargo placement and inspect equipment loading arrangements.
+                Plan cargo placement and inspect equipment
+                loading arrangements.
             </p>
+
+            {#if movementId}
+                <p class="mt-2 text-sm text-emerald-400">
+                    Movement-connected loading
+                </p>
+            {:else}
+                <p class="mt-2 text-sm text-slate-500">
+                    Independent loading preview
+                </p>
+            {/if}
         </div>
 
         <button
                 type="button"
                 onclick={onBack}
                 class="rounded-lg border border-slate-700
-             px-4 py-2 text-sm text-slate-300
-             hover:bg-slate-800"
+                   px-4 py-2 text-sm text-slate-300
+                   hover:bg-slate-800"
         >
             Back
         </button>
     </div>
 
     <div class="grid gap-4 lg:grid-cols-3">
-        <div class="rounded-xl border border-slate-800
-                bg-slate-900 p-5 lg:col-span-1">
+
+        <div
+                class="rounded-xl border border-slate-800
+                   bg-slate-900 p-5 lg:col-span-1"
+        >
             <h4 class="font-semibold text-white">
                 Equipment Context
             </h4>
 
             <dl class="mt-4 space-y-3 text-sm">
+
+                {#if movementId}
+                    <div>
+                        <dt class="text-slate-400">
+                            Movement
+                        </dt>
+
+                        <dd class="mt-1 text-white">
+                            {movementReference ?? movementId}
+                        </dd>
+                    </div>
+                {/if}
+
                 <div>
-                    <dt class="text-slate-400">Equipment</dt>
-                    <dd class="mt-1 text-white">{equipmentName}</dd>
+                    <dt class="text-slate-400">
+                        Equipment
+                    </dt>
+
+                    <dd class="mt-1 text-white">
+                        {equipmentName}
+                    </dd>
                 </div>
 
                 <div>
-                    <dt class="text-slate-400">Cargo Space</dt>
-                    <dd class="mt-1 text-white">{cargoSpaceName}</dd>
+                    <dt class="text-slate-400">
+                        Cargo Space
+                    </dt>
+
+                    <dd class="mt-1 text-white">
+                        {cargoSpaceName}
+                    </dd>
                 </div>
 
                 <div>
-                    <dt class="text-slate-400">Usable Dimensions</dt>
+                    <dt class="text-slate-400">
+                        Usable Dimensions
+                    </dt>
+
                     <dd class="mt-1 text-white">
                         {lengthMm} × {widthMm} × {heightMm} mm
                     </dd>
                 </div>
+
             </dl>
         </div>
 
-        <div class="min-w-0 rounded-xl border border-slate-800
-                bg-slate-900 p-5 lg:col-span-2">
-            <LoadingPreview3D
-                    {cargoSpaceId}
-                    {lengthMm}
-                    {widthMm}
-                    {heightMm}
-            />
+        <div
+                class="min-w-0 rounded-xl border border-slate-800
+                   bg-slate-900 p-5 lg:col-span-2"
+        >
+            {#if movementId && equipmentId}
+                {#key `${movementId}:${equipmentId}:${cargoSpaceId}`}
+                    <LoadingPlanControls
+                            {movementId}
+                            {equipmentId}
+                            {cargoSpaceId}
+                    />
+                {/key}
+            {/if}
+
+            {#key `${movementId ?? 'independent'}:${equipmentId ?? 'none'}:${cargoSpaceId}`}
+                <LoadingPreview3D
+                        {cargoSpaceId}
+                        {lengthMm}
+                        {widthMm}
+                        {heightMm}
+                        {movementId}
+                        {equipmentId}
+                />
+            {/key}
         </div>
+
     </div>
 </div>
