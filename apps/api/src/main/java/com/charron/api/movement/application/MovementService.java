@@ -2,6 +2,7 @@
 package com.charron.api.movement.application;
 
 import com.charron.api.movement.domain.Movement;
+import com.charron.api.movement.domain.MovementStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +46,46 @@ public class MovementService {
         repository.save(movement);
 
         return movement;
+    }
+
+    @Transactional
+    public Movement transition(
+            UUID movementId,
+            MovementStatus targetStatus
+    ) {
+        Objects.requireNonNull(
+                movementId,
+                "Movement ID is required"
+        );
+        Objects.requireNonNull(
+                targetStatus,
+                "Target status is required"
+        );
+
+        Movement current = repository.findById(movementId)
+                .orElseThrow(() ->
+                        new MovementNotFoundException(movementId)
+                );
+
+        // Domain validation also updates the movement timestamp.
+        Movement updated = current.transitionTo(targetStatus);
+
+        boolean persisted = repository.updateStatus(
+                movementId,
+                current.status(),
+                updated.status(),
+                updated.updatedAt()
+        );
+
+        if (!persisted) {
+            throw new MovementTransitionConflictException(
+                    movementId,
+                    current.status(),
+                    targetStatus
+            );
+        }
+
+        return updated;
     }
 
     @Transactional(readOnly = true)

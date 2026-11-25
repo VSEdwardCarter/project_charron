@@ -1,31 +1,21 @@
 
 <script lang="ts">
     import { onMount } from 'svelte'
+
     import {
         getMovements,
         type Movement
     } from '../../lib/api/movements'
-    import MovementEquipmentAssignment from './MovementEquipmentAssignment.svelte'
+
+    interface Props {
+        onSelectMovement: (movement: Movement) => void
+    }
+
+    let { onSelectMovement }: Props = $props()
+
     let movements: Movement[] = $state([])
     let loading = $state(true)
     let error: string | null = $state(null)
-    let selectedMovementId = $state<string | null>(null)
-
-    interface Props {
-        onSelectionChange?: (movementId: string | null) => void
-    }
-
-    let { onSelectionChange }: Props = $props()
-
-    function selectMovement(movementId: string): void {
-        selectedMovementId =
-            selectedMovementId === movementId
-                ? null
-                : movementId
-
-        onSelectionChange?.(selectedMovementId)
-    }
-
 
     async function loadMovements(): Promise<void> {
         loading = true
@@ -50,10 +40,11 @@
 <section class="space-y-4">
     <div>
         <h3 class="text-lg font-semibold text-white">
-            Planned Movements
+            Movements
         </h3>
+
         <p class="mt-1 text-sm text-slate-400">
-            Transportation movements registered in CHARRON.
+            Select a movement to open its operational workspace.
         </p>
     </div>
 
@@ -66,7 +57,8 @@
             {error}
         </p>
     {:else if movements.length === 0}
-        <p class="rounded-lg border border-slate-800 p-4 text-sm text-slate-400">
+        <p class="rounded-lg border border-slate-800
+                  p-4 text-sm text-slate-400">
             No movements have been registered.
         </p>
     {:else}
@@ -81,16 +73,19 @@
                     <th class="p-3">Status</th>
                 </tr>
                 </thead>
+
                 <tbody>
                 {#each movements as movement (movement.id)}
-                    <tr class="border-t border-slate-800 text-slate-200">
+                    <tr class="border-t border-slate-800
+                                   text-slate-200">
 
                         <td class="p-3 font-medium">
                             <button
                                     type="button"
-                                    onclick={() => selectMovement(movement.id)}
-                                    aria-expanded={selectedMovementId === movement.id}
-                                    class="text-emerald-400 hover:text-emerald-300 hover:underline"
+                                    onclick={() => onSelectMovement(movement)}
+                                    class="text-emerald-400
+                                           hover:text-emerald-300
+                                           hover:underline"
                             >
                                 {movement.reference}
                             </button>
@@ -98,42 +93,20 @@
 
                         <td class="p-3">{movement.origin}</td>
                         <td class="p-3">{movement.destination}</td>
+
                         <td class="p-3">
-                            {new Date(movement.plannedDeparture).toLocaleString()}
+                            {new Date(
+                                movement.plannedDeparture
+                            ).toLocaleString()}
                         </td>
-                        <td class="p-3">{movement.status}</td>
+
+                        <td class="p-3">
+                            {movement.status.replaceAll('_', ' ')}
+                        </td>
                     </tr>
                 {/each}
                 </tbody>
             </table>
-
-            {#if selectedMovementId}
-                {@const selectedMovement = movements.find(
-                    movement => movement.id === selectedMovementId
-                )}
-
-                {#if selectedMovement}
-                    <div class="mt-6 border-t border-slate-800 pt-6">
-                        <div class="mb-4">
-                            <h3 class="text-lg font-semibold text-white">
-                                Equipment Assignments — {selectedMovement.reference}
-                            </h3>
-                            <p class="mt-1 text-sm text-slate-400">
-                                {selectedMovement.origin}
-                                →
-                                {selectedMovement.destination}
-                            </p>
-                        </div>
-
-                        {#key selectedMovementId}
-                            <MovementEquipmentAssignment
-                                    movementId={selectedMovementId}
-                            />
-                        {/key}
-                    </div>
-                {/if}
-            {/if}
-
         </div>
     {/if}
 </section>

@@ -11,6 +11,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -29,6 +30,7 @@ public class LoadingPlanArrangementService {
     private final LoadingPlanCargoRepository cargoRepository;
 
     private final JsonMapper objectMapper;
+    private final LoadingMovementLock movementLock;
 
 
 
@@ -37,7 +39,8 @@ public class LoadingPlanArrangementService {
             LoadingPlanService loadingPlanService,
             LoadingPlanCargoRepository cargoRepository,
 
-            JsonMapper objectMapper
+            JsonMapper objectMapper,
+            LoadingMovementLock movementLock
 
     ) {
         this.arrangementRepository =
@@ -51,9 +54,12 @@ public class LoadingPlanArrangementService {
 
         this.objectMapper =
                 Objects.requireNonNull(objectMapper);
+
+        this.movementLock =
+                Objects.requireNonNull(movementLock);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public LoadingPlanArrangement save(
             UUID loadingPlanId,
             String requestSnapshot,
@@ -68,6 +74,12 @@ public class LoadingPlanArrangementService {
         LoadingPlan plan = loadingPlanService.getById(
                 loadingPlanId
         );
+
+        if (!movementLock.acquire(plan.movementId())) {
+            throw new LoadingPlanNotFoundException(
+                    "Movement does not exist: " + plan.movementId()
+            );
+        }
 
         JsonNode request = parseObject(
                 requestSnapshot,

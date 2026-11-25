@@ -3,7 +3,7 @@ package com.charron.api.movement.web;
 
 import com.charron.api.movement.application.MovementService;
 import com.charron.api.movement.domain.Movement;
-import org.springframework.http.HttpStatus;
+import com.charron.api.movement.domain.MovementStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -53,5 +53,33 @@ public class MovementController {
                 .map(MovementResponse::from)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{id}/dispatch")
+    public MovementResponse dispatch(@PathVariable UUID id) {
+        return transition(id, MovementStatus.DISPATCHED);
+    }
+
+    @PostMapping("/{id}/start")
+    public MovementResponse start(@PathVariable UUID id) {
+        return transition(id, MovementStatus.IN_TRANSIT);
+    }
+
+    @PostMapping("/{id}/complete")
+    public MovementResponse complete(@PathVariable UUID id) {
+        return transition(id, MovementStatus.COMPLETED);
+    }
+
+    @PostMapping("/{id}/cancel")
+    public MovementResponse cancel(@PathVariable UUID id) {
+        return transition(id, MovementStatus.CANCELLED);
+    }
+
+    private MovementResponse transition(
+            UUID id,
+            MovementStatus targetStatus
+    ) {
+        Movement movement = service.transition(id, targetStatus);
+        return MovementResponse.from(movement);
     }
 }

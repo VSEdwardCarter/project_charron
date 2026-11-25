@@ -1,3 +1,4 @@
+
 package com.charron.api.movement.domain;
 
 import java.time.Instant;
@@ -26,6 +27,7 @@ public record Movement(
         Objects.requireNonNull(status, "Movement status is required");
         Objects.requireNonNull(createdAt, "Creation timestamp is required");
         Objects.requireNonNull(updatedAt, "Update timestamp is required");
+
         plannedDeparture = plannedDeparture.truncatedTo(ChronoUnit.MICROS);
         plannedArrival = plannedArrival.truncatedTo(ChronoUnit.MICROS);
         createdAt = createdAt.truncatedTo(ChronoUnit.MICROS);
@@ -36,7 +38,9 @@ public record Movement(
         destination = destination.trim();
 
         if (reference.isBlank()) {
-            throw new IllegalArgumentException("Movement reference cannot be blank");
+            throw new IllegalArgumentException(
+                    "Movement reference cannot be blank"
+            );
         }
 
         if (origin.isBlank() || destination.isBlank()) {
@@ -76,6 +80,42 @@ public record Movement(
                 arrival,
                 MovementStatus.PLANNED,
                 now,
+                now
+        );
+    }
+
+    public Movement transitionTo(MovementStatus targetStatus) {
+        Objects.requireNonNull(
+                targetStatus,
+                "Target movement status is required"
+        );
+
+        if (!status.canTransitionTo(targetStatus)) {
+            throw new IllegalStateException(
+                    "Invalid movement transition: "
+                            + status
+                            + " -> "
+                            + targetStatus
+            );
+        }
+
+        Instant now = Instant.now()
+                .truncatedTo(ChronoUnit.MICROS);
+
+        // Keep timestamps valid if the system clock moves backward.
+        if (now.isBefore(updatedAt)) {
+            now = updatedAt;
+        }
+
+        return new Movement(
+                id,
+                reference,
+                origin,
+                destination,
+                plannedDeparture,
+                plannedArrival,
+                targetStatus,
+                createdAt,
                 now
         );
     }

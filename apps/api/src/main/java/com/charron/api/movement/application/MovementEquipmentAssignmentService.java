@@ -1,10 +1,11 @@
-
 package com.charron.api.movement.application;
 
 import com.charron.api.movement.domain.MovementEquipmentAssignment;
 import com.charron.api.movement.domain.MovementEquipmentRole;
+
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -23,6 +24,7 @@ public class MovementEquipmentAssignmentService {
             MovementRepository movementRepository,
             EquipmentExistenceChecker equipmentExistenceChecker
     ) {
+
         this.assignmentRepository =
                 Objects.requireNonNull(assignmentRepository);
 
@@ -33,21 +35,37 @@ public class MovementEquipmentAssignmentService {
                 Objects.requireNonNull(equipmentExistenceChecker);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public MovementEquipmentAssignment assign(
             UUID movementId,
             UUID equipmentId,
             MovementEquipmentRole role
     ) {
-        Objects.requireNonNull(movementId, "Movement ID is required");
-        Objects.requireNonNull(equipmentId, "Equipment ID is required");
-        Objects.requireNonNull(role, "Assignment role is required");
 
-        if (movementRepository.findById(movementId).isEmpty()) {
-            throw new MovementNotFoundException(movementId);
-        }
+        Objects.requireNonNull(
+                movementId,
+                "Movement ID is required"
+        );
+
+        Objects.requireNonNull(
+                equipmentId,
+                "Equipment ID is required"
+        );
+
+        Objects.requireNonNull(
+                role,
+                "Assignment role is required"
+        );
+
+        movementRepository.findByIdForUpdate(movementId)
+                .orElseThrow(
+                        () -> new MovementNotFoundException(
+                                movementId
+                        )
+                );
 
         if (!equipmentExistenceChecker.existsById(equipmentId)) {
+
             throw new EquipmentNotFoundException(equipmentId);
         }
 
@@ -56,6 +74,7 @@ public class MovementEquipmentAssignmentService {
                 equipmentId,
                 role
         )) {
+
             throw new DuplicateMovementEquipmentAssignmentException(
                     movementId,
                     equipmentId,
@@ -70,17 +89,18 @@ public class MovementEquipmentAssignmentService {
                         role
                 );
 
-
         try {
+
             assignmentRepository.insert(assignment);
+
         } catch (DuplicateKeyException exception) {
+
             throw new DuplicateMovementEquipmentAssignmentException(
                     movementId,
                     equipmentId,
                     role
             );
         }
-
 
         return assignment;
     }
@@ -89,9 +109,14 @@ public class MovementEquipmentAssignmentService {
     public List<MovementEquipmentAssignment> findByMovementId(
             UUID movementId
     ) {
-        Objects.requireNonNull(movementId, "Movement ID is required");
+
+        Objects.requireNonNull(
+                movementId,
+                "Movement ID is required"
+        );
 
         if (movementRepository.findById(movementId).isEmpty()) {
+
             throw new MovementNotFoundException(movementId);
         }
 

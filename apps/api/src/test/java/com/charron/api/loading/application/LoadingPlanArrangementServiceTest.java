@@ -7,6 +7,7 @@ import com.charron.api.loading.domain.LoadingPlanCargo;
 import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,9 +22,11 @@ class LoadingPlanArrangementServiceTest {
     private LoadingPlanArrangementRepository repository;
     private LoadingPlanService loadingPlanService;
     private LoadingPlanCargoRepository cargoRepository;
+    private LoadingMovementLock movementLock;
     private LoadingPlanArrangementService service;
 
     private UUID planId;
+    private UUID movementId;
     private UUID cargoSpaceId;
     private UUID cargoId;
 
@@ -32,26 +35,32 @@ class LoadingPlanArrangementServiceTest {
         repository = mock(LoadingPlanArrangementRepository.class);
         loadingPlanService = mock(LoadingPlanService.class);
         cargoRepository = mock(LoadingPlanCargoRepository.class);
+        movementLock = mock(LoadingMovementLock.class);
 
         service = new LoadingPlanArrangementService(
                 repository,
                 loadingPlanService,
                 cargoRepository,
-                JsonMapper.builder().build()
+                JsonMapper.builder().build(),
+                movementLock
         );
 
         planId = UUID.randomUUID();
+        movementId = UUID.randomUUID();
         cargoSpaceId = UUID.randomUUID();
         cargoId = UUID.randomUUID();
 
         LoadingPlan plan = LoadingPlan.create(
-                UUID.randomUUID(),
+                movementId,
                 UUID.randomUUID(),
                 cargoSpaceId
         );
 
         when(loadingPlanService.getById(planId))
                 .thenReturn(plan);
+
+        when(movementLock.acquire(movementId))
+                .thenReturn(true);
 
         when(cargoRepository.findByLoadingPlanId(planId))
                 .thenReturn(List.of(
@@ -285,5 +294,83 @@ class LoadingPlanArrangementServiceTest {
         assertEquals("INVALID", updated.status());
 
         verify(repository).save(updated);
+    }
+
+    @Test
+    void acquiresMovementLockBeforeValidationAndPersistence() {
+
+        LoadingPlanArrangement result = service.save(
+                planId,
+                request(3),
+                preview("VALID")
+        );
+
+        InOrder order = inOrder(
+                loadingPlanService,
+                movementLock,
+                cargoRepository,
+                repository
+        );
+
+        order.verify(loadingPlanService)
+                .getById(planId);
+
+        order.verify(movementLock)
+                .acquire(movementId);
+
+        order.verify(cargoRepository)
+                .findByLoadingPlanId(planId);
+
+        order.verify(repository)
+                .findByLoadingPlanId(planId);
+
+        order.verify(repository)
+                .save(result);
+    }
+
+    @Test
+    void rejectsSaveWhenMovementCannotBeLocked() {
+
+        when(movementLock.acquire(movementId))
+                .thenReturn(false);
+
+        assertThrows(
+                LoadingPlanNotFoundException.class,
+                () -> service.save(
+                        planId,
+                        request(3),
+                        preview("VALID")
+                )
+        );
+
+        verifyNoInteractions(cargoRepository);
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void retrievesArrangementWithoutAcquiringMovementLock() {
+
+        assertTrue(
+                service.findByLoadingPlanId(planId).isEmpty()
+        );
+
+        verifyNoInteractions(movementLock);
+    }
+
+    @Test
+    void rejectsNullPlanIdBeforeAcquiringMovementLock() {
+
+        assertThrows(
+                InvalidLoadingPlanException.class,
+                () -> service.save(
+                        null,
+                        request(3),
+                        preview("VALID")
+                )
+        );
+
+        verifyNoInteractions(movementLock);
+        verifyNoInteractions(cargoRepository);
+        verifyNoInteractions(repository);
     }
 }

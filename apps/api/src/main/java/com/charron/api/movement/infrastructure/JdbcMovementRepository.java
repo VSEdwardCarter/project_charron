@@ -7,8 +7,11 @@ import com.charron.api.movement.domain.MovementStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -101,6 +104,37 @@ public class JdbcMovementRepository implements MovementRepository {
     }
 
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<Movement> findByIdForUpdate(UUID id) {
+
+        Objects.requireNonNull(
+                id,
+                "Movement ID is required"
+        );
+
+        List<Movement> results = jdbcTemplate.query("""
+            SELECT
+                id,
+                reference,
+                origin,
+                destination,
+                planned_departure,
+                planned_arrival,
+                status,
+                created_at,
+                updated_at
+            FROM movements
+            WHERE id = ?
+            FOR UPDATE
+            """,
+                MOVEMENT_ROW_MAPPER,
+                id
+        );
+
+        return results.stream().findFirst();
+    }
+
+    @Override
     public List<Movement> findAll() {
         return jdbcTemplate.query("""
                 SELECT
@@ -138,4 +172,46 @@ public class JdbcMovementRepository implements MovementRepository {
 
         return count != null && count > 0;
     }
+
+
+    @Override
+    public boolean updateStatus(
+            UUID movementId,
+            MovementStatus expectedStatus,
+            MovementStatus targetStatus,
+            Instant updatedAt
+    ) {
+        Objects.requireNonNull(movementId);
+        Objects.requireNonNull(expectedStatus);
+        Objects.requireNonNull(targetStatus);
+        Objects.requireNonNull(updatedAt);
+
+        if (!expectedStatus.canTransitionTo(targetStatus)) {
+            throw new IllegalArgumentException(
+                    "Invalid movement transition: "
+                            + expectedStatus
+                            + " -> "
+                            + targetStatus
+            );
+        }
+
+        int updatedRows = jdbcTemplate.update(
+                """
+                UPDATE movements
+                SET status = ?,
+                    updated_at = ?
+                WHERE id = ?
+                  AND status = ?
+                  AND updated_at <= ?
+                """,
+                targetStatus.name(),
+                Timestamp.from(updatedAt),
+                movementId,
+                expectedStatus.name(),
+                Timestamp.from(updatedAt)
+        );
+
+        return updatedRows == 1;
+    }
+
 }

@@ -64,7 +64,7 @@ class MovementEquipmentAssignmentServiceTest {
 
     @Test
     void assignsEquipmentToExistingMovement() {
-        when(movementRepository.findById(movementId))
+        when(movementRepository.findByIdForUpdate(movementId))
                 .thenReturn(Optional.of(movement));
 
         MovementEquipmentAssignment assignment =
@@ -88,7 +88,7 @@ class MovementEquipmentAssignmentServiceTest {
 
     @Test
     void rejectsAssignmentForUnknownMovement() {
-        when(movementRepository.findById(movementId))
+        when(movementRepository.findByIdForUpdate(movementId))
                 .thenReturn(Optional.empty());
 
         assertThrows(
@@ -106,7 +106,7 @@ class MovementEquipmentAssignmentServiceTest {
 
     @Test
     void rejectsDuplicateAssignment() {
-        when(movementRepository.findById(movementId))
+        when(movementRepository.findByIdForUpdate(movementId))
                 .thenReturn(Optional.of(movement));
 
         when(assignmentRepository
@@ -169,7 +169,7 @@ class MovementEquipmentAssignmentServiceTest {
 
     @Test
     void rejectsAssignmentForUnknownEquipment() {
-        when(movementRepository.findById(movementId))
+        when(movementRepository.findByIdForUpdate(movementId))
                 .thenReturn(Optional.of(movement));
 
         UUID unknownEquipmentId = UUID.randomUUID();
@@ -192,7 +192,7 @@ class MovementEquipmentAssignmentServiceTest {
 
     @Test
     void translatesDatabaseDuplicateConflict() {
-        when(movementRepository.findById(movementId))
+        when(movementRepository.findByIdForUpdate(movementId))
                 .thenReturn(Optional.of(movement));
 
         doThrow(new DuplicateKeyException(
