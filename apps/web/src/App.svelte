@@ -1,5 +1,6 @@
 
 <script lang="ts">
+  import RoadmapSection from './features/overview/RoadmapSection.svelte'
   import Header from './lib/components/layout/Header.svelte'
   import Sidebar from './lib/components/layout/Sidebar.svelte'
   import FleetPage from "./features/fleet/FleetPage.svelte"
@@ -62,6 +63,7 @@
             <p class="mt-2 text-sm text-slate-400">
               Your logistics operations workspace is ready.
             </p>
+          <RoadmapSection />
           {:else if activeSection === 'fleet'}
             <FleetPage />
           {:else if activeSection === 'cargo'}
