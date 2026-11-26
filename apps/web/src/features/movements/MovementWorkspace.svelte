@@ -1,4 +1,5 @@
 <script lang="ts">
+    import MovementQualityVerificationPanel from "./MovementQualityVerificationPanel.svelte"
     import {
         type Movement
     } from '../../lib/api/movements'
@@ -19,6 +20,7 @@
         | 'equipment'
         | 'loading'
         | 'manifests'
+        | 'quality'
 
     interface Props {
         movement: Movement
@@ -36,7 +38,8 @@
         { id: 'overview', label: 'Overview' },
         { id: 'equipment', label: 'Equipment' },
         { id: 'loading', label: 'Loading' },
-        { id: 'manifests', label: 'Manifests' }
+        { id: 'manifests', label: 'Manifests' },
+        { id: 'quality', label: 'QA/QC' }
     ]
 
     function formatDate(value: string): string {
@@ -207,6 +210,14 @@
             <MovementManifestPanel
                 movementId={movement.id}
                 movementReference={movement.reference}
+            />
+        {/key}
+
+    {:else if activeTab === 'quality'}
+
+        {#key movement.id}
+            <MovementQualityVerificationPanel
+                movementId={movement.id}
             />
         {/key}
 

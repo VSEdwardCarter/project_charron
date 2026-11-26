@@ -63,23 +63,78 @@ tasks.named('bootRun') {
 
 
 tasks.named('test') {
-	def envFile = rootProject.file('../../infrastructure/.env')
 
-	if (envFile.exists()) {
-		envFile.eachLine { line ->
-			def trimmed = line.trim()
+	useJUnitPlatform()
 
-			if (trimmed && !trimmed.startsWith('#')) {
-				def parts = trimmed.split('=', 2)
-
-				if (parts.length == 2) {
-					environment parts[0].trim(), parts[1].trim()
-				}
+	// Remove inherited CHARRON and Spring configuration.
+	setEnvironment(
+			System.getenv().findAll { key, value ->
+				!key.startsWith('CHARRON_') &&
+						!key.startsWith('SPRING_') &&
+						!key.startsWith('VPIC_') &&
+						!key.startsWith('PG') &&
+						!(key in [
+								'JAVA_TOOL_OPTIONS',
+								'JDK_JAVA_OPTIONS',
+								'_JAVA_OPTIONS'
+						])
 			}
-		}
-	}
-}
+	)
 
+	// Dedicated disposable PostgreSQL instance.
+	environment 'CHARRON_DB_URL',
+			'jdbc:postgresql://127.0.0.1:5435/charron_test'
+
+	environment 'CHARRON_DB_USER',
+			'charron_test'
+
+	environment 'CHARRON_DB_PASSWORD',
+			'charron_test_only'
+
+	environment 'CHARRON_VPIC_ENABLED',
+			'true'
+
+	environment 'VPIC_JDBC_URL',
+			'jdbc:postgresql://127.0.0.1:5436/vpic_test'
+
+	environment 'VPIC_DB_USERNAME',
+			'vpic_test_reader'
+
+	environment 'VPIC_DB_PASSWORD',
+			'vpic_test_reader_only'
+
+	systemProperty 'spring.profiles.active', 'test'
+
+	systemProperty 'spring.datasource.url',
+			'jdbc:postgresql://127.0.0.1:5435/charron_test'
+
+	systemProperty 'spring.datasource.username',
+			'charron_test'
+
+	systemProperty 'spring.datasource.password',
+			'charron_test_only'
+
+	systemProperty 'charron.vpic.enabled', 'true'
+
+	systemProperty 'VPIC_JDBC_URL',
+			'jdbc:postgresql://127.0.0.1:5436/vpic_test'
+
+	systemProperty 'VPIC_DB_USERNAME',
+			'vpic_test_reader'
+
+	systemProperty 'VPIC_DB_PASSWORD',
+			'vpic_test_reader_only'
+
+	// Flyway must use the same isolated database.
+	systemProperty 'spring.flyway.url',
+			'jdbc:postgresql://127.0.0.1:5435/charron_test'
+
+	systemProperty 'spring.flyway.user',
+			'charron_test'
+
+	systemProperty 'spring.flyway.password',
+			'charron_test_only'
+}
 
 def webDirectory = rootProject.file('../../apps/web')
 

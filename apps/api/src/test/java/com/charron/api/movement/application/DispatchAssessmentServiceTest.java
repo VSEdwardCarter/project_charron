@@ -26,6 +26,7 @@ class DispatchAssessmentServiceTest {
     private MovementManifestRepository manifestRepository;
     private ManifestLifecycleService lifecycleService;
     private MovementManifestService manifestService;
+    private MovementQualityVerificationRepository verificationRepository;
     private MovementManifest issuedManifest;
     private ManifestLifecycle issuedLifecycle;
 
@@ -50,6 +51,8 @@ class DispatchAssessmentServiceTest {
         manifestRepository = mock(MovementManifestRepository.class);
         lifecycleService = mock(ManifestLifecycleService.class);
         manifestService = mock(MovementManifestService.class);
+        verificationRepository =
+                mock(MovementQualityVerificationRepository.class);
 
         service = new DispatchAssessmentService(
                 movementRepository,
@@ -60,7 +63,8 @@ class DispatchAssessmentServiceTest {
                 freshnessService,
                 manifestRepository,
                 lifecycleService,
-                manifestService
+                manifestService,
+                verificationRepository
         );
 
         movementId = UUID.randomUUID();
@@ -119,6 +123,9 @@ class DispatchAssessmentServiceTest {
 
         when(issuedManifest.id()).thenReturn(manifestId);
         when(issuedManifest.version()).thenReturn(1);
+
+        when(verificationRepository.existsForCurrentOperationalRevision(manifestId))
+                .thenReturn(true);
 
         when(manifestRepository.findByMovementId(movementId))
                 .thenReturn(List.of(issuedManifest));
@@ -432,7 +439,7 @@ class DispatchAssessmentServiceTest {
     }
 
     @Test
-    void currentIssuedManifestDoesNotCreateBlocker() {
+    void currentVerifiedIssuedManifestDoesNotCreateBlocker() {
 
         DispatchAssessment result =
                 service.assess(movementId);
@@ -544,4 +551,90 @@ class DispatchAssessmentServiceTest {
         verify(manifestService, never())
                 .assessFreshness(reviewed.id());
     }
+
+    @Test
+    void currentIssuedManifestWithoutVerificationIsBlocked() {
+
+        UUID manifestId = issuedManifest.id();
+
+        when(verificationRepository.existsForCurrentOperationalRevision(manifestId))
+                .thenReturn(false);
+
+        assertManifestBlocker("QUALITY_VERIFICATION_REQUIRED");
+    }
+
+    @Test
+    void completedQualityVerificationClearsBlocker() {
+
+        UUID manifestId = issuedManifest.id();
+
+        when(verificationRepository.existsForCurrentOperationalRevision(manifestId))
+                .thenReturn(true);
+
+        DispatchAssessment result = service.assess(movementId);
+
+        assertFalse(result.hasBlockingFindings());
+        assertTrue(result.findings().isEmpty());
+
+        verify(verificationRepository)
+                .existsForCurrentOperationalRevision(manifestId);
+    }
+
+    @Test
+    void completedVerificationCannotOverrideStaleManifest() {
+
+        UUID manifestId = issuedManifest.id();
+
+        when(manifestService.assessFreshness(manifestId))
+                .thenReturn(new ManifestFreshnessAssessment(
+                        manifestId,
+                        ManifestFreshnessStatus.STALE,
+                        java.util.Set.of(ManifestChangeType.CARGO),
+                        Instant.now(),
+                        null
+                ));
+
+        assertManifestBlocker("MANIFEST_STALE");
+
+        verifyNoInteractions(verificationRepository);
+    }
+
+    @Test
+    void previousVerificationDoesNotSatisfyReplacementManifest() {
+
+        MovementManifest replacement =
+                configureAdditionalManifest(
+                        2,
+                        ManifestStatus.ISSUED
+                );
+
+        UUID replacementId = replacement.id();
+
+        when(issuedLifecycle.status())
+                .thenReturn(ManifestStatus.SUPERSEDED);
+
+        when(manifestRepository.findByMovementId(movementId))
+                .thenReturn(List.of(replacement, issuedManifest));
+
+        when(manifestService.assessFreshness(replacementId))
+                .thenReturn(new ManifestFreshnessAssessment(
+                        replacementId,
+                        ManifestFreshnessStatus.CURRENT,
+                        java.util.Set.of(),
+                        Instant.now(),
+                        null
+                ));
+
+        when(verificationRepository.existsForCurrentOperationalRevision(replacementId))
+                .thenReturn(false);
+
+        assertManifestBlocker("QUALITY_VERIFICATION_REQUIRED");
+
+        verify(verificationRepository)
+                .existsForCurrentOperationalRevision(replacementId);
+
+        verify(verificationRepository, never())
+                .existsForCurrentOperationalRevision(issuedManifest.id());
+    }
+
 }

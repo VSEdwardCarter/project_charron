@@ -1,4 +1,3 @@
-
 package com.charron.api.integration.infrastructure;
 
 import com.charron.api.integration.application.ExternalSourceRecordRepository;
@@ -23,8 +22,8 @@ class OlistSellerCsvAdapterTest {
     @Autowired
     private ExternalSourceRecordRepository repository;
 
-    @Test
-    void ingestsFiveRealOlistSellers() throws Exception {
+    private Path sellerCsvPath() {
+
         Path csvPath = Path.of(
                 System.getProperty("user.home"),
                 "Desktop",
@@ -40,11 +39,15 @@ class OlistSellerCsvAdapterTest {
                 "Olist seller CSV must exist at " + csvPath
         );
 
-        long initialCount = repository.count("olist", "seller");
+        return csvPath;
+    }
 
-        int ingested = adapter.ingest(csvPath, 5);
+    @Test
+    void ingestsFiveRealOlistSellers() throws Exception {
 
-        assertEquals(5, ingested);
+        Path csvPath = sellerCsvPath();
+
+        assertEquals(5, adapter.ingest(csvPath, 5));
 
         Map<String, Object> seller = repository.findPayload(
                 "olist",
@@ -57,32 +60,41 @@ class OlistSellerCsvAdapterTest {
         assertEquals("13023", seller.get("seller_zip_code_prefix"));
         assertEquals(4, seller.size());
 
-        assertEquals(
-                initialCount,
-                repository.count("olist", "seller")
+        assertTrue(
+                repository.count("olist", "seller") >= 5
         );
     }
 
     @Test
-    void replayingSameCsvDoesNotDuplicateSellers() throws Exception {
-        Path csvPath = Path.of(
-                System.getProperty("user.home"),
-                "Desktop",
-                "Repos",
-                "charron-data",
-                "olist",
-                "raw",
-                "olist_sellers_dataset.csv"
-        );
+    void replayingSameCsvDoesNotDuplicateSellers()
+            throws Exception {
 
-        long initialCount = repository.count("olist", "seller");
+        Path csvPath = sellerCsvPath();
+
+        long initialCount =
+                repository.count("olist", "seller");
 
         assertEquals(5, adapter.ingest(csvPath, 5));
+
+        long countAfterFirstIngestion =
+                repository.count("olist", "seller");
+
+        assertTrue(countAfterFirstIngestion >= 5);
+
+        assertTrue(
+                countAfterFirstIngestion >= initialCount
+        );
+
+        assertTrue(
+                countAfterFirstIngestion <= initialCount + 5
+        );
+
         assertEquals(5, adapter.ingest(csvPath, 5));
 
         assertEquals(
-                initialCount,
-                repository.count("olist", "seller")
+                countAfterFirstIngestion,
+                repository.count("olist", "seller"),
+                "Replaying the same CSV must not create duplicates"
         );
     }
 }

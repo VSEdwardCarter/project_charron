@@ -44,6 +44,9 @@ public class DispatchAssessmentService {
 
     private final MovementManifestRepository manifestRepository;
 
+    private final MovementQualityVerificationRepository
+            verificationRepository;
+
     private final ManifestLifecycleService lifecycleService;
 
     private final MovementManifestService manifestService;
@@ -57,7 +60,8 @@ public class DispatchAssessmentService {
             LoadingPlanArrangementFreshnessService freshnessService,
             MovementManifestRepository manifestRepository,
             ManifestLifecycleService lifecycleService,
-            MovementManifestService manifestService
+            MovementManifestService manifestService,
+            MovementQualityVerificationRepository verificationRepository
     ) {
         this.movementRepository =
                 Objects.requireNonNull(movementRepository);
@@ -85,6 +89,9 @@ public class DispatchAssessmentService {
 
         this.manifestService =
                 Objects.requireNonNull(manifestService);
+
+        this.verificationRepository =
+                Objects.requireNonNull(verificationRepository);
     }
 
     @Transactional(
@@ -299,7 +306,20 @@ public class DispatchAssessmentService {
         switch (assessment.status()) {
 
             case CURRENT -> {
-                // No manifest-related blocker.
+
+                if (!verificationRepository.existsForCurrentOperationalRevision(
+                        issuedManifest.id()
+                )) {
+
+                    addBlocker(
+                            findings,
+                            "QUALITY_VERIFICATION_REQUIRED",
+                            "Issued manifest version "
+                                    + issuedManifest.version()
+                                    + " requires completed quality verification "
+                                    + "for the current operational revision"
+                    );
+                }
             }
 
             case STALE -> addBlocker(
